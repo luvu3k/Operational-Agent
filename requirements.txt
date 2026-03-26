@@ -1,0 +1,6 @@
+openai
+pydantic
+sqlite-utils
+faiss-cpu
+matplotlib
+networkx

@@ -1,0 +1,11 @@
+{
+  "skill_name": "vehicle_routing",
+  "keywords": [
+    "vrp",
+    "vehicle",
+    "routing",
+    "time window",
+    "capacity"
+  ],
+  "description": "Generic vehicle routing optimization problems."
+}

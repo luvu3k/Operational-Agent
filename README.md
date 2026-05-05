@@ -1,14 +1,14 @@
-# RescueOptAgent
+# Operational_Agent
 
-This directory is the project root for the custom optimization agent.
+该目录是自定义优化智能体的项目根目录。
 
-Main responsibilities:
-- Hold the agent's runtime code, knowledge, tools, memory, and storage.
-- Separate orchestration, LLM access, and solver execution concerns.
-- Keep optimization problem knowledge in Markdown-based skills.
+主要职责：
+- 存放智能体的运行时代码、知识、工具、记忆和存储。
+- 分离编排（orchestration）、LLM 访问和求解器执行的关注点。
+- 将优化问题的相关知识保留在基于 Markdown 的技能（skills）中。
 
 Key design:
-- `llm/` handles OpenAI API access.
-- `Operational-Agent/` handles the agent workflow and ReAct loop.
-- `tools/` exposes callable actions to the agent.
-- `solver/` performs code generation, execution, and result parsing.
+- `llm/` 负责处理 OpenAI API 的访问。
+- `Operational-Agent/` 负责处理智能体工作流和 ReAct 循环。
+- `tools/` 向智能体暴露可调用的工具（tools）。
+- `solver/` 负责执行代码的生成、运行以及结果解析。

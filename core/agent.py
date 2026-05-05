@@ -2,6 +2,7 @@
 Role:
 - Main agent entrypoint.
 - Coordinates session context, retrieval, problem building, confirmation, and the ReAct loop.
+- Agent基类，提供基本的agent框架和流程控制，具体细节由子类实现。
 
 Called by:
 - `app.cli`

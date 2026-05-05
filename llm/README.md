@@ -1,8 +1,8 @@
 # llm
 
-This folder is the OpenAI access layer.
+此文件夹是 OpenAI  API 的封装层.
 
-Main responsibilities:
-- Hold the official OpenAI API client wrapper.
-- Provide one place for model calls, prompts, and tool-calling dispatch.
-- Keep low-level model interaction separate from the agent workflow.
+主要职责：
+- 持有官方 OpenAI API 客户端包装器。
+- 为模型调用、提示和工具调用分发提供一个统一的场所。
+- 将底层模型交互与代理工作流分开。

@@ -4,7 +4,7 @@ Role:
 - Keep tool registration logic out of the main agent loop.
 
 Called by:
-- `Operational-Agent.react_loop`
+- `Operational-Agent.react_agent`
 - `Operational-Agent.agent`
 
 Calls:

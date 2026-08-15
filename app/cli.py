@@ -24,7 +24,7 @@ def run_cli() -> None:
         print("未输入问题描述，程序结束。")
         return
 
-    first_round = run_agent(user_input)
+    first_round = run_agent(user_input, session_id=session.session_id)
     print("\n=== 待确认问题定义 ===")
     print(first_round["confirmation_message"])
 
@@ -37,6 +37,36 @@ def run_cli() -> None:
         user_input,
         confirmed=True,
         problem_spec=first_round["problem_spec"],
+        session_id=session.session_id,
     )
     print("\n=== ReAct 执行结果 ===")
     print(second_round["final_answer"])
+
+    tool_payload = second_round.get("tool_result", {}).get("payload", {})
+    generated_code = tool_payload.get("generated_code")
+    solution = tool_payload.get("solution")
+    code_path = tool_payload.get("code_path")
+    result_path = tool_payload.get("result_path")
+    route_graph_path = tool_payload.get("route_graph_path")
+    answer_path = tool_payload.get("answer_path")
+    if generated_code:
+        print("\n=== 自动生成的求解代码 ===")
+        print(generated_code)
+    if solution:
+        print("\n=== 求解结果 ===")
+        print(f"目标函数值：{solution.get('objective_value')}")
+        print(f"求解状态：{solution.get('status_text', solution.get('status'))}")
+        shipment_plan = solution.get("shipment_plan", []) or []
+        if shipment_plan:
+            print("运输/路径方案：")
+            for leg in shipment_plan:
+                qty = leg.get("quantity", leg.get("flow", ""))
+                print(f"  {leg.get('from', '')} -> {leg.get('to', '')} : {qty}")
+    if code_path:
+        print(f"\n代码文件：{code_path}")
+    if result_path:
+        print(f"结果文件：{result_path}")
+    if route_graph_path:
+        print(f"路径图文件：{route_graph_path}")
+    if answer_path:
+        print(f"答案文件：{answer_path}")

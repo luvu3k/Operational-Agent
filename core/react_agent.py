@@ -34,13 +34,16 @@ def _build_planner_system_prompt() -> str:
 
 def _maybe_build_llm() -> Optional[LLM]:
     try:
-        return LLM.from_env()
+        return LLM()
     except Exception:
         return None
 
 
 def _choose_tool_without_llm(problem_spec: Dict[str, Any]) -> Dict[str, Any]:
     solver_preference = str(problem_spec.get("solver_preference", "auto")).lower()
+    # MDVRPTW-P 问题族统一走多仓库车辆路径求解工具（内部再按偏好选 gurobi / genetic）。
+    if str(problem_spec.get("skill_name", "")) == "mdvrptw_island_supply":
+        return {"tool_name": "mdvrptw_solver", "arguments": {"problem_spec": problem_spec}}
     if solver_preference == "exact":
         return {"tool_name": "exact_solver", "arguments": {"problem_spec": problem_spec}}
     return {"tool_name": "heuristic_solver", "arguments": {"problem_spec": problem_spec}}
@@ -83,29 +86,41 @@ def run_react_loop(problem_state: Dict[str, Any]) -> Dict[str, Any]:
     llm_plan = None
 
     if llm is not None:
-        plan_response = llm.chat(
-            [
-                {"role": "system", "content": _build_planner_system_prompt()},
+        try:
+            plan_response = llm.chat(
+                [
+                    {"role": "system", "content": _build_planner_system_prompt()},
+                    {
+                        "role": "user",
+                        "content": (
+                            "请基于以下问题选择最合适的一个工具，并尽量使用 tool calling。\n"
+                            f"{json.dumps(problem_spec, ensure_ascii=False)}"
+                        ),
+                    },
+                ],
+                tools=get_openai_tool_schemas(),
+                tool_choice="auto",
+                temperature=0,
+            )
+            llm_plan = {
+                "provider": llm.provider,
+                "model": llm.model,
+                "content": plan_response.content,
+                "tool_calls": plan_response.tool_calls,
+            }
+            trace.append({"phase": "plan", "result": llm_plan})
+            selected_call = _parse_tool_calls(plan_response.tool_calls)
+        except Exception as exc:
+            trace.append(
                 {
-                    "role": "user",
-                    "content": (
-                        "请基于以下问题选择最合适的一个工具，并尽量使用 tool calling。\n"
-                        f"{json.dumps(problem_spec, ensure_ascii=False)}"
-                    ),
-                },
-            ],
-            tools=get_openai_tool_schemas(),
-            tool_choice="auto",
-            temperature=0,
-        )
-        llm_plan = {
-            "provider": llm.provider,
-            "model": llm.model,
-            "content": plan_response.content,
-            "tool_calls": plan_response.tool_calls,
-        }
-        trace.append({"phase": "plan", "result": llm_plan})
-        selected_call = _parse_tool_calls(plan_response.tool_calls)
+                    "phase": "plan_error",
+                    "result": {
+                        "provider": llm.provider,
+                        "model": llm.model,
+                        "error": str(exc),
+                    },
+                }
+            )
 
     if selected_call is None:
         selected_call = _choose_tool_without_llm(problem_spec)
@@ -134,16 +149,32 @@ def run_react_loop(problem_state: Dict[str, Any]) -> Dict[str, Any]:
 
     final_answer = ""
     if llm is not None:
-        summary_response = llm.simple_chat(
-            user_text=(
-                "请根据以下 ReAct 执行记录，给出中文总结，说明最终调用了什么工具、得到什么结果。\n"
-                f"{json.dumps(trace, ensure_ascii=False)}"
-            ),
-            system_prompt="你是一个负责总结求解过程的优化智能体。",
-            temperature=0,
-        )
-        final_answer = summary_response.content
-        trace.append({"phase": "summary", "result": {"content": final_answer}})
+        try:
+            summary_response = llm.simple_chat(
+                user_text=(
+                    "请根据以下 ReAct 执行记录，给出中文总结，说明最终调用了什么工具、得到什么结果。\n"
+                    f"{json.dumps(trace, ensure_ascii=False)}"
+                ),
+                system_prompt="你是一个负责总结求解过程的优化智能体。",
+                temperature=0,
+            )
+            final_answer = summary_response.content.strip()
+            if not final_answer:
+                action_payload = action_result.get("payload", {})
+                final_answer = (
+                    f"已完成最小 ReAct 闭环，调用工具 `{tool_name}`，"
+                    f"结果状态为 `{action_result.get('status')}`，"
+                    f"工具返回信息：{action_payload.get('message', '无补充说明。')}"
+                )
+            trace.append({"phase": "summary", "result": {"content": final_answer}})
+        except Exception as exc:
+            trace.append({"phase": "summary_error", "result": {"error": str(exc)}})
+            action_payload = action_result.get("payload", {})
+            final_answer = (
+                f"已完成最小 ReAct 闭环，调用工具 `{tool_name}`，"
+                f"结果状态为 `{action_result.get('status')}`，"
+                f"工具返回信息：{action_payload.get('message', '无补充说明。')}"
+            )
     else:
         action_payload = action_result.get("payload", {})
         final_answer = (
@@ -156,6 +187,7 @@ def run_react_loop(problem_state: Dict[str, Any]) -> Dict[str, Any]:
         "status": "completed",
         "problem_spec": problem_spec,
         "selected_tool": tool_name,
+        "tool_result": action_result,
         "trace": trace,
         "final_answer": final_answer,
         "llm_enabled": llm is not None,

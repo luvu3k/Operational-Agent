@@ -1,0 +1,24 @@
+{
+  "skill_name": "emergency_island_supply",
+  "keywords": ["岛礁", "补给", "island", "supply", "仓库", "warehouse"],
+  "description": "岛礁应急物资补给的默认资源样例，可被 resource_retriever 检索。",
+  "instance_data": {
+    "depots": [
+      {"name": "warehouse_1", "supply": 70},
+      {"name": "warehouse_2", "supply": 50}
+    ],
+    "islands": [
+      {"name": "island_a", "demand": 30},
+      {"name": "island_b", "demand": 40},
+      {"name": "island_c", "demand": 20}
+    ],
+    "routes": [
+      {"from": "warehouse_1", "to": "island_a", "cost": 4, "capacity": 40},
+      {"from": "warehouse_1", "to": "island_b", "cost": 6, "capacity": 40},
+      {"from": "warehouse_1", "to": "island_c", "cost": 9, "capacity": 30},
+      {"from": "warehouse_2", "to": "island_a", "cost": 5, "capacity": 40},
+      {"from": "warehouse_2", "to": "island_b", "cost": 4, "capacity": 40},
+      {"from": "warehouse_2", "to": "island_c", "cost": 3, "capacity": 30}
+    ]
+  }
+}

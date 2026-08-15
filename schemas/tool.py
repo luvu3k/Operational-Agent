@@ -1,7 +1,7 @@
 """
 作用：
 - 定义工具注册、工具调用、工具执行结果所使用的统一数据结构。
-- 为 `tools.tool_registry`、`core.tool_calling` 和 `llm.client1` 提供共享契约。
+- 为 `tools.tool_registry`、`core.tool_calling` 和 `llm.client` 提供共享契约。
 
 调用关系：
 - 被 `tools.tool_registry` 调用，用于保存工具元数据并导出 OpenAI tools schema。

@@ -5,3 +5,10 @@ __pycache__/
 venv/
 .idea/
 .vscode/
+*.pdf
+
+# 运行产物与本地数据库（自动生成，不纳入版本控制）
+artifacts/runs/
+storage/db/
+experiments/mdvrptw/results/
+experiments/mdvrptw/*.json

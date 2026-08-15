@@ -1,0 +1,8 @@
+{
+  "skill_name": "mdvrptw_island_supply",
+  "keywords": [
+    "mdvrptw", "多仓库", "多保障中心", "车辆路径", "时间窗", "优先级",
+    "补给舰", "无人机", "岛礁", "远海", "路径规划", "vrp", "routing"
+  ],
+  "description": "带时间窗与优先级约束的多仓库车辆路径问题（MDVRPTW-P），面向远海岛礁应急物资补给。"
+}

@@ -1,13 +1,18 @@
-openai==2.31.0
-tqdm==4.67.3
-python-dotenv==1.2.2
-pydantic==2.12.5
-httpx==0.29.1
+# 说明：使用版本范围而非硬锁定，兼容 Python 3.9+（含本机 .venv 的 3.9.6）与更高版本。
+openai>=1.40
+tqdm>=4.66
+python-dotenv>=1.0
+pydantic>=2.6
+httpx>=0.27
 tenacity>=8.2.3,<10.0.0
 orjson>=3.10.0,<4.0.0
-typing-extensions>=4.11.0,<5.0.0
-numpy==2.4.4
+typing-extensions>=4.11.0
+numpy>=1.26
 sqlite-utils>=3.36,<4.0
-pulp>=2.8.0,<3.0.0
-networkx>=3.3,<4.0
-matplotlib==3.10.8
+pulp>=2.8.0
+networkx>=3.2
+matplotlib>=3.8
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+# 可选：精确求解需要 Gurobi Python 接口与 license
+# gurobipy>=11.0

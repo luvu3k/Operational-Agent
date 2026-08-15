@@ -23,6 +23,9 @@ class ProblemSpec:
     description: str
     user_input: str
     background: str = ""
+    sets: Dict[str, Any] = field(default_factory=dict)
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    decision_variables: Dict[str, Any] = field(default_factory=dict)
     objectives: List[str] = field(default_factory=list)
     hard_constraints: List[str] = field(default_factory=list)
     soft_constraints: List[str] = field(default_factory=list)
@@ -30,7 +33,10 @@ class ProblemSpec:
     resources: Dict[str, Any] = field(default_factory=dict)
     experience_hints: List[str] = field(default_factory=list)
     extra_requirements: List[str] = field(default_factory=list)
+    missing_data_hints: List[str] = field(default_factory=list)
     solver_preference: str = "auto"
+    solver_backend: str = "auto"
+    generated_code: str = ""
     confirmed: bool = False
 
     def to_dict(self) -> Dict[str, Any]:

@@ -20,18 +20,34 @@ def _format_list(title: str, values: List[str]) -> str:
     return f"{title}：\n{body}"
 
 
+def _format_dict(title: str, values: Dict[str, object]) -> str:
+    if not values:
+        return f"{title}：暂无"
+    body = "\n".join(f"- {key}: {value}" for key, value in values.items())
+    return f"{title}：\n{body}"
+
+
 def build_confirmation_message(problem_spec: Dict[str, object]) -> str:
     """生成用户确认所需的问题说明。"""
+    resources = problem_spec.get("resources", {})
+    instance_data = resources.get("instance_data", {}) if isinstance(resources, dict) else {}
+    data_summary = "已提供结构化实例数据" if instance_data else "尚未提供结构化实例数据"
     return "\n".join(
         [
             "请确认以下问题定义是否正确：",
             f"问题类型：{problem_spec.get('skill_name', 'unknown')}",
             f"问题说明：{problem_spec.get('description', '')}",
             f"求解偏好：{problem_spec.get('solver_preference', 'auto')}",
+            f"求解后端：{problem_spec.get('solver_backend', 'auto')}",
+            f"数据状态：{data_summary}",
+            _format_dict("集合", dict(problem_spec.get("sets", {}))),
+            _format_dict("参数", dict(problem_spec.get("parameters", {}))),
+            _format_dict("决策变量", dict(problem_spec.get("decision_variables", {}))),
             _format_list("目标函数", list(problem_spec.get("objectives", []))),
             _format_list("硬约束", list(problem_spec.get("hard_constraints", []))),
             _format_list("软约束", list(problem_spec.get("soft_constraints", []))),
             _format_list("建模假设", list(problem_spec.get("assumptions", []))),
+            _format_list("缺失数据提示", list(problem_spec.get("missing_data_hints", []))),
             _format_list("用户附加需求", list(problem_spec.get("extra_requirements", []))),
         ]
     )

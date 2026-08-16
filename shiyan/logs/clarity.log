@@ -1,0 +1,70 @@
+C01_knapsack × OptAgent: overall=3.8
+C01_knapsack × GPT-4o: overall=3.4
+C01_knapsack × GPT-4o-mini: overall=2.4
+C01_knapsack × Moonshot-v1: overall=2.6
+C01_knapsack × Qwen2.5-72B: overall=3.2
+C01_knapsack × DeepSeek-V3-raw: overall=4.4
+C02_tsp × OptAgent: overall=3.2
+C02_tsp × GPT-4o: overall=2.6
+C02_tsp × GPT-4o-mini: overall=2.4
+C02_tsp × Moonshot-v1: overall=2.4
+C02_tsp × Qwen2.5-72B: overall=1.0
+C02_tsp × DeepSeek-V3-raw: overall=3.4
+C03_assignment × OptAgent: overall=3.6
+C03_assignment × GPT-4o: overall=2.4
+C03_assignment × GPT-4o-mini: overall=2.4
+C03_assignment × Moonshot-v1: overall=2.8
+C03_assignment × Qwen2.5-72B: overall=1.0
+C03_assignment × DeepSeek-V3-raw: overall=3.8
+C04_bin_packing × OptAgent: overall=4.0
+C04_bin_packing × GPT-4o: overall=2.6
+C04_bin_packing × GPT-4o-mini: overall=2.6
+C04_bin_packing × Moonshot-v1: overall=2.0
+C04_bin_packing × Qwen2.5-72B: overall=2.6
+C04_bin_packing × DeepSeek-V3-raw: overall=3.0
+C05_set_cover × OptAgent: overall=4.2
+C05_set_cover × GPT-4o: overall=2.6
+C05_set_cover × GPT-4o-mini: overall=2.4
+C05_set_cover × Moonshot-v1: overall=2.6
+C05_set_cover × Qwen2.5-72B: overall=3.4
+C05_set_cover × DeepSeek-V3-raw: overall=2.8
+C06_job_scheduling × OptAgent: overall=3.6
+C06_job_scheduling × GPT-4o: overall=2.2
+C06_job_scheduling × GPT-4o-mini: overall=2.4
+C06_job_scheduling × Moonshot-v1: overall=2.0
+C06_job_scheduling × Qwen2.5-72B: overall=2.2
+C06_job_scheduling × DeepSeek-V3-raw: overall=2.8
+C07_cvrp × OptAgent: overall=3.0
+C07_cvrp × GPT-4o: overall=2.8
+C07_cvrp × GPT-4o-mini: overall=2.8
+C07_cvrp × Moonshot-v1: overall=2.0
+C07_cvrp × Qwen2.5-72B: overall=1.0
+C07_cvrp × DeepSeek-V3-raw: overall=3.8
+C08_graph_coloring × OptAgent: overall=3.0
+C08_graph_coloring × GPT-4o: overall=2.2
+C08_graph_coloring × GPT-4o-mini: overall=2.0
+C08_graph_coloring × Moonshot-v1: overall=2.2
+C08_graph_coloring × Qwen2.5-72B: overall=1.8
+C08_graph_coloring × DeepSeek-V3-raw: overall=3.2
+C09_max_flow × OptAgent: overall=4.0
+C09_max_flow × GPT-4o: overall=2.6
+C09_max_flow × GPT-4o-mini: overall=1.6
+C09_max_flow × Moonshot-v1: overall=2.8
+C09_max_flow × Qwen2.5-72B: overall=2.4
+C09_max_flow × DeepSeek-V3-raw: overall=3.2
+C10_facility_location × OptAgent: overall=3.2
+C10_facility_location × GPT-4o: overall=2.8
+C10_facility_location × GPT-4o-mini: overall=2.4
+C10_facility_location × Moonshot-v1: overall=2.4
+C10_facility_location × Qwen2.5-72B: overall=3.2
+C10_facility_location × DeepSeek-V3-raw: overall=3.8
+
+=== 各系统解释清晰度平均分 ===
+{
+  "OptAgent": 3.56,
+  "GPT-4o": 2.62,
+  "GPT-4o-mini": 2.34,
+  "Moonshot-v1": 2.38,
+  "Qwen2.5-72B": 2.18,
+  "DeepSeek-V3-raw": 3.42
+}

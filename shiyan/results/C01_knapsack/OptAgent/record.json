@@ -1,0 +1,29 @@
+{
+  "system": "OptAgent",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C01_knapsack",
+  "nl": "有5件物品，重量分别是2、3、4、5、9，价值分别是3、4、5、8、10，背包最大承重是20，每件物品最多选一次。请问如何选择物品使装入背包的总价值最大？给出最大总价值和所选物品。",
+  "math_model": "这是一个0-1背包问题：\n- 决策变量：x_i ∈ {0,1} 表示是否选择第i件物品 (i=1..5)\n- 目标函数：maximize ∑(value_i * x_i)\n- 约束条件：∑(weight_i * x_i) ≤ 20",
+  "code": "import os as _os\n_os.environ.setdefault('RESULT_PATH', '/Applications/yhy/Operational_Agent/artifacts/runs/knapsack_20260816_general_llm_151857/result.json')\nimport pulp\nimport os\nimport json\n\n# 物品数据\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nitem_names = [\"Item1\", \"Item2\", \"Item3\", \"Item4\", \"Item5\"]\nmax_weight = 20\n\n# 创建问题\nprob = pulp.LpProblem(\"KnapsackProblem\", pulp.LpMaximize)\n\n# 创建决策变量\nx = [pulp.LpVariable(f\"x_{i}\", cat=\"Binary\") for i in range(len(values))]\n\n# 目标函数\nprob += pulp.lpSum([values[i] * x[i] for i in range(len(values))])\n\n# 约束条件\nprob += pulp.lpSum([weights[i] * x[i] for i in range(len(weights))]) <= max_weight\n\n# 求解\nprob.solve()\n\n# 收集结果\nselected_items = [item_names[i] for i in range(len(x)) if pulp.value(x[i]) == 1]\ntotal_value = pulp.value(prob.objective)\ntotal_weight = sum(weights[i] for i in range(len(x)) if pulp.value(x[i]) == 1)\n\n# 输出结果\nprint(f\"最大总价值: {total_value}\")\nprint(f\"所选物品: {selected_items}\")\nprint(f\"总重量: {total_weight}/{max_weight}\")\n\n# 保存到JSON\nresult = {\n    \"objective\": total_value,\n    \"solution\": selected_items,\n    \"feasible\": True,\n    \"total_weight\": total_weight\n}\n\noutput_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(output_path, \"w\") as f:\n    json.dump(result, f, indent=2)",
+  "explanation": "1. 问题描述：我们需要从5件物品中选择一些装入背包，每件物品有重量和价值，背包最多承重20，目标是让总价值最大。\n\n2. 建模方法：\n   - 为每件物品创建一个0-1变量（0表示不选，1表示选）\n   - 目标函数是所有选中物品的价值总和\n   - 唯一约束是总重量不超过20\n\n3. 求解过程：\n   - 使用线性规划库PuLP求解这个0-1整数规划问题\n   - 算法会自动找到满足重量限制下价值最大的组合\n\n4. 结果解读：\n   - 程序会输出最大总价值、所选物品列表和实际总重量\n   - 例如可能选择Item1、Item2、Item4、Item5，总价值25，总重量19\n   - 结果会保存在result.json中，包含目标值、解和可行性状态\n\n5. 实际应用：这类问题常见于资源分配、投资组合等场景，需要在有限资源下做出最优选择。",
+  "raw_output": "===MODEL===\n这是一个0-1背包问题：\n- 决策变量：x_i ∈ {0,1} 表示是否选择第i件物品 (i=1..5)\n- 目标函数：maximize ∑(value_i * x_i)\n- 约束条件：∑(weight_i * x_i) ≤ 20\n\n===CODE===\n```python\nimport pulp\nimport os\nimport json\n\n# 物品数据\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nitem_names = [\"Item1\", \"Item2\", \"Item3\", \"Item4\", \"Item5\"]\nmax_weight = 20\n\n# 创建问题\nprob = pulp.LpProblem(\"KnapsackProblem\", pulp.LpMaximize)\n\n# 创建决策变量\nx = [pulp.LpVariable(f\"x_{i}\", cat=\"Binary\") for i in range(len(values))]\n\n# 目标函数\nprob += pulp.lpSum([values[i] * x[i] for i in range(len(values))])\n\n# 约束条件\nprob += pulp.lpSum([weights[i] * x[i] for i in range(len(weights))]) <= max_weight\n\n# 求解\nprob.solve()\n\n# 收集结果\nselected_items = [item_names[i] for i in range(len(x)) if pulp.value(x[i]) == 1]\ntotal_value = pulp.value(prob.objective)\ntotal_weight = sum(weights[i] for i in range(len(x)) if pulp.value(x[i]) == 1)\n\n# 输出结果\nprint(f\"最大总价值: {total_value}\")\nprint(f\"所选物品: {selected_items}\")\nprint(f\"总重量: {total_weight}/{max_weight}\")\n\n# 保存到JSON\nresult = {\n    \"objective\": total_value,\n    \"solution\": selected_items,\n    \"feasible\": True,\n    \"total_weight\": total_weight\n}\n\noutput_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(output_path, \"w\") as f:\n    json.dump(result, f, indent=2)\n```\n\n===EXPLANATION===\n1. 问题描述：我们需要从5件物品中选择一些装入背包，每件物品有重量和价值，背包最多承重20，目标是让总价值最大。\n\n2. 建模方法：\n   - 为每件物品创建一个0-1变量（0表示不选，1表示选）\n   - 目标函数是所有选中物品的价值总和\n   - 唯一约束是总重量不超过20\n\n3. 求解过程：\n   - 使用线性规划库PuLP求解这个0-1整数规划问题\n   - 算法会自动找到满足重量限制下价值最大的组合\n\n4. 结果解读：\n   - 程序会输出最大总价值、所选物品列表和实际总重量\n   - 例如可能选择Item1、Item2、Item4、Item5，总价值25，总重量19\n   - 结果会保存在result.json中，包含目标值、解和可行性状态\n\n5. 实际应用：这类问题常见于资源分配、投资组合等场景，需要在有限资源下做出最优选择。",
+  "elapsed_s": 22.87,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/a4c4ce8db53944eb9fb2f3ba82f3e355-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/a4c4ce8db53944eb9fb2f3ba82f3e355-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 6",
+  "stderr": "",
+  "result": {
+    "objective": 26.0,
+    "solution": [
+      "Item1",
+      "Item3",
+      "Item4",
+      "Item5"
+    ],
+    "feasible": true,
+    "total_weight": 20
+  },
+  "objective": 26.0,
+  "ground_truth": 26,
+  "runnable": true,
+  "verdict": "optimal"
+}

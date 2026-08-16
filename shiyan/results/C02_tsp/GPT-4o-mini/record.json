@@ -1,0 +1,30 @@
+{
+  "system": "GPT-4o-mini",
+  "model": "gpt-4o-mini",
+  "case": "C02_tsp",
+  "nl": "一个销售员要访问5个城市，坐标分别是A(0,0)、B(0,4)、C(4,4)、D(4,0)、E(2,2)，从A出发访问每个城市恰好一次最后回到A。城市间距离为欧氏距离。请给出总距离最短的巡回路线和最短总距离。",
+  "math_model": "设城市为 \\( V = \\{A, B, C, D, E\\} \\)，城市间的距离为 \\( d(i, j) \\) 表示城市 \\( i \\) 到城市 \\( j \\) 的欧氏距离。目标是找到一个哈密顿回路，使得总距离最小。\n\n目标函数：\n\\[\n\\text{minimize} \\quad \\sum_{i \\in V} \\sum_{j \\in V, j \\neq i} d(i, j) \\cdot x_{ij}\n\\]\n\n约束条件：\n1. 每个城市被访问一次：\n   \\[\n   \\sum_{j \\in V, j \\neq i} x_{ij} = 1 \\quad \\forall i \\in V\n   \\]\n2. 每个城市被离开一次：\n   \\[\n   \\sum_{i \\in V, i \\neq j} x_{ij} = 1 \\quad \\forall j \\in V\n   \\]\n3. 形成回路的约束（可以使用子集约束或其他方法来避免子回路）。\n\n其中 \\( x_{ij} \\) 是二进制变量，表示是否从城市 \\( i \\) 直接到城市 \\( j \\)。",
+  "code": "import json\nimport itertools\nimport math\nimport os\n\n# 计算欧氏距离\ndef euclidean_distance(p1, p2):\n    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)\n\n# 城市坐标\ncities = {\n    'A': (0, 0),\n    'B': (0, 4),\n    'C': (4, 4),\n    'D': (4, 0),\n    'E': (2, 2)\n}\n\n# 计算所有城市之间的距离\ndistances = { (i, j): euclidean_distance(cities[i], cities[j]) for i, j in itertools.permutations(cities.keys(), 2) }\n\n# 生成所有可能的巡回路线\ncity_names = list(cities.keys())\nshortest_route = None\nmin_distance = float('inf')\n\n# 计算每条路线的总距离\nfor perm in itertools.permutations(city_names[1:]):  # 不包括起点A\n    route = ['A'] + list(perm) + ['A']\n    total_distance = sum(distances[(route[i], route[i + 1])] for i in range(len(route) - 1))\n    \n    if total_distance < min_distance:\n        min_distance = total_distance\n        shortest_route = route\n\n# 结果写入 JSON 文件\nresult = {\n    \"objective\": min_distance,\n    \"solution\": shortest_route,\n    \"feasible\": True\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：我们需要找到一条最短的路线，使得销售员从城市A出发，访问5个城市（A, B, C, D, E）各一次后返回A。城市间的距离是通过欧氏距离计算的。\n\n2. **模型构建**：我们定义了一个目标函数，旨在最小化访问所有城市的总距离。我们还设定了一些约束条件，确保每个城市被访问一次，并且形成一个完整的回路。\n\n3. **代码实现**：我们使用Python的`itertools`库生成所有可能的城市访问顺序（巡回路线），并计算每条路线的总距离。最后，我们将最短的路线和对应的距离写入一个JSON文件中，文件路径由环境变量`RESULT_PATH`指定。",
+  "raw_output": "===MODEL===\n设城市为 \\( V = \\{A, B, C, D, E\\} \\)，城市间的距离为 \\( d(i, j) \\) 表示城市 \\( i \\) 到城市 \\( j \\) 的欧氏距离。目标是找到一个哈密顿回路，使得总距离最小。\n\n目标函数：\n\\[\n\\text{minimize} \\quad \\sum_{i \\in V} \\sum_{j \\in V, j \\neq i} d(i, j) \\cdot x_{ij}\n\\]\n\n约束条件：\n1. 每个城市被访问一次：\n   \\[\n   \\sum_{j \\in V, j \\neq i} x_{ij} = 1 \\quad \\forall i \\in V\n   \\]\n2. 每个城市被离开一次：\n   \\[\n   \\sum_{i \\in V, i \\neq j} x_{ij} = 1 \\quad \\forall j \\in V\n   \\]\n3. 形成回路的约束（可以使用子集约束或其他方法来避免子回路）。\n\n其中 \\( x_{ij} \\) 是二进制变量，表示是否从城市 \\( i \\) 直接到城市 \\( j \\)。\n\n===CODE===\n```python\nimport json\nimport itertools\nimport math\nimport os\n\n# 计算欧氏距离\ndef euclidean_distance(p1, p2):\n    return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)\n\n# 城市坐标\ncities = {\n    'A': (0, 0),\n    'B': (0, 4),\n    'C': (4, 4),\n    'D': (4, 0),\n    'E': (2, 2)\n}\n\n# 计算所有城市之间的距离\ndistances = { (i, j): euclidean_distance(cities[i], cities[j]) for i, j in itertools.permutations(cities.keys(), 2) }\n\n# 生成所有可能的巡回路线\ncity_names = list(cities.keys())\nshortest_route = None\nmin_distance = float('inf')\n\n# 计算每条路线的总距离\nfor perm in itertools.permutations(city_names[1:]):  # 不包括起点A\n    route = ['A'] + list(perm) + ['A']\n    total_distance = sum(distances[(route[i], route[i + 1])] for i in range(len(route) - 1))\n    \n    if total_distance < min_distance:\n        min_distance = total_distance\n        shortest_route = route\n\n# 结果写入 JSON 文件\nresult = {\n    \"objective\": min_distance,\n    \"solution\": shortest_route,\n    \"feasible\": True\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. **问题描述**：我们需要找到一条最短的路线，使得销售员从城市A出发，访问5个城市（A, B, C, D, E）各一次后返回A。城市间的距离是通过欧氏距离计算的。\n\n2. **模型构建**：我们定义了一个目标函数，旨在最小化访问所有城市的总距离。我们还设定了一些约束条件，确保每个城市被访问一次，并且形成一个完整的回路。\n\n3. **代码实现**：我们使用Python的`itertools`库生成所有可能的城市访问顺序（巡回路线），并计算每条路线的总距离。最后，我们将最短的路线和对应的距离写入一个JSON文件中，文件路径由环境变量`RESULT_PATH`指定。",
+  "elapsed_s": 6.59,
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "",
+  "result": {
+    "objective": 17.65685424949238,
+    "solution": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "A"
+    ],
+    "feasible": true
+  },
+  "objective": 17.65685424949238,
+  "ground_truth": 17.6569,
+  "runnable": true,
+  "verdict": "optimal"
+}

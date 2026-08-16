@@ -1,0 +1,48 @@
+{
+  "system": "GPT-4o",
+  "model": "gpt-4o",
+  "case": "C02_tsp",
+  "nl": "一个销售员要访问5个城市，坐标分别是A(0,0)、B(0,4)、C(4,4)、D(4,0)、E(2,2)，从A出发访问每个城市恰好一次最后回到A。城市间距离为欧氏距离。请给出总距离最短的巡回路线和最短总距离。",
+  "math_model": "我们将此问题建模为旅行商问题 (Traveling Salesman Problem, TSP)。定义如下：\n\n1. 集合 \\( N = \\{A, B, C, D, E\\} \\) 表示城市集合。\n2. 每个城市的坐标为 \\( A(0,0), B(0,4), C(4,4), D(4,0), E(2,2) \\)。\n3. 定义变量 \\( x_{ij} \\in \\{0, 1\\} \\)，表示是否从城市 \\( i \\) 到城市 \\( j \\) 走一条路径。\n4. 定义 \\( d_{ij} \\) 为城市 \\( i \\) 和城市 \\( j \\) 之间的欧氏距离：\\( d_{ij} = \\sqrt{(x_i - x_j)^2 + (y_i - y_j)^2} \\)。\n5. 目标是最小化总距离：\\( \\min \\sum_{i \\in N} \\sum_{j \\in N, j \\neq i} d_{ij} \\cdot x_{ij} \\)。\n6. 约束条件：\n   - 每个城市必须被访问一次：\\( \\sum_{j \\in N, j \\neq i} x_{ij} = 1 \\, \\forall i \\in N \\)。\n   - 每个城市必须被离开一次：\\( \\sum_{i \\in N, i \\neq j} x_{ij} = 1 \\, \\forall j \\in N \\)。\n   - 消除子回路约束：使用子集 \\( S \\subset N \\)，要求 \\( \\sum_{i \\in S} \\sum_{j \\in S, j \\neq i} x_{ij} \\leq |S| - 1 \\, \\forall S \\subset N, |S| \\geq 2 \\)。",
+  "code": "import json\nimport math\nimport os\nfrom itertools import permutations\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus, value\n\n# Coordinates of the cities\ncities = {\n    \"A\": (0, 0),\n    \"B\": (0, 4),\n    \"C\": (4, 4),\n    \"D\": (4, 0),\n    \"E\": (2, 2)\n}\n\n# Calculate Euclidean distance\ndef euclidean_distance(coord1, coord2):\n    return math.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)\n\n# Distance matrix\ndistances = {\n    (i, j): euclidean_distance(cities[i], cities[j]) for i in cities for j in cities if i != j\n}\n\n# Problem definition\nproblem = LpProblem(\"Traveling_Salesman_Problem\", LpMinimize)\n\n# Decision variables\nx = LpVariable.dicts(\"x\", distances, cat=\"Binary\")\n\n# Objective function\nproblem += lpSum(distances[i, j] * x[i, j] for i, j in distances)\n\n# Constraints\nfor k in cities:\n    problem += lpSum(x[i, k] for i in cities if i != k) == 1  # Enter each city once\n    problem += lpSum(x[k, j] for j in cities if j != k) == 1  # Leave each city once\n\n# Solve the problem\nproblem.solve()\n\n# Extract the solution\nroute = []\nif LpStatus[problem.status] == \"Optimal\":\n    current_city = \"A\"\n    visited = set()\n    while len(visited) < len(cities):\n        visited.add(current_city)\n        for next_city in cities:\n            if current_city != next_city and x[current_city, next_city].varValue == 1:\n                route.append((current_city, next_city))\n                current_city = next_city\n                break\n    route.append((current_city, \"A\"))  # Return to the starting city\n\n# Output results\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": route,\n    \"feasible\": LpStatus[problem.status] == \"Optimal\"\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：销售员需要从城市 A 出发，访问所有城市（B, C, D, E）恰好一次，并最终返回 A。目标是找到总距离最短的巡回路线。\n\n2. **数学模型**：我们将问题建模为旅行商问题 (TSP)。通过定义变量 \\( x_{ij} \\) 表示是否从城市 \\( i \\) 到城市 \\( j \\) 走一条路径，并以欧氏距离为权重，构建目标函数和约束条件。\n\n3. **代码实现**：\n   - 首先定义城市的坐标，并计算城市之间的欧氏距离。\n   - 使用 `pulp` 库定义线性规划问题，目标是最小化总距离。\n   - 添加约束条件，确保每个城市被访问一次且离开一次。\n   - 使用 `pulp` 求解问题，并提取最优解。\n\n4. **结果输出**：代码将最优解（包括总距离和巡回路线）保存到 `result.json` 文件中。文件路径通过环境变量 `RESULT_PATH` 指定，默认路径为当前目录下的 `result.json`。\n\n5. **运行方式**：运行代码后，检查 `result.json` 文件，查看最短总距离和对应的巡回路线。如果问题有解，`feasible` 字段为 `true`，否则为 `false`。",
+  "raw_output": "===MODEL===\n\n我们将此问题建模为旅行商问题 (Traveling Salesman Problem, TSP)。定义如下：\n\n1. 集合 \\( N = \\{A, B, C, D, E\\} \\) 表示城市集合。\n2. 每个城市的坐标为 \\( A(0,0), B(0,4), C(4,4), D(4,0), E(2,2) \\)。\n3. 定义变量 \\( x_{ij} \\in \\{0, 1\\} \\)，表示是否从城市 \\( i \\) 到城市 \\( j \\) 走一条路径。\n4. 定义 \\( d_{ij} \\) 为城市 \\( i \\) 和城市 \\( j \\) 之间的欧氏距离：\\( d_{ij} = \\sqrt{(x_i - x_j)^2 + (y_i - y_j)^2} \\)。\n5. 目标是最小化总距离：\\( \\min \\sum_{i \\in N} \\sum_{j \\in N, j \\neq i} d_{ij} \\cdot x_{ij} \\)。\n6. 约束条件：\n   - 每个城市必须被访问一次：\\( \\sum_{j \\in N, j \\neq i} x_{ij} = 1 \\, \\forall i \\in N \\)。\n   - 每个城市必须被离开一次：\\( \\sum_{i \\in N, i \\neq j} x_{ij} = 1 \\, \\forall j \\in N \\)。\n   - 消除子回路约束：使用子集 \\( S \\subset N \\)，要求 \\( \\sum_{i \\in S} \\sum_{j \\in S, j \\neq i} x_{ij} \\leq |S| - 1 \\, \\forall S \\subset N, |S| \\geq 2 \\)。\n\n===CODE===\n\n```python\nimport json\nimport math\nimport os\nfrom itertools import permutations\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus, value\n\n# Coordinates of the cities\ncities = {\n    \"A\": (0, 0),\n    \"B\": (0, 4),\n    \"C\": (4, 4),\n    \"D\": (4, 0),\n    \"E\": (2, 2)\n}\n\n# Calculate Euclidean distance\ndef euclidean_distance(coord1, coord2):\n    return math.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)\n\n# Distance matrix\ndistances = {\n    (i, j): euclidean_distance(cities[i], cities[j]) for i in cities for j in cities if i != j\n}\n\n# Problem definition\nproblem = LpProblem(\"Traveling_Salesman_Problem\", LpMinimize)\n\n# Decision variables\nx = LpVariable.dicts(\"x\", distances, cat=\"Binary\")\n\n# Objective function\nproblem += lpSum(distances[i, j] * x[i, j] for i, j in distances)\n\n# Constraints\nfor k in cities:\n    problem += lpSum(x[i, k] for i in cities if i != k) == 1  # Enter each city once\n    problem += lpSum(x[k, j] for j in cities if j != k) == 1  # Leave each city once\n\n# Solve the problem\nproblem.solve()\n\n# Extract the solution\nroute = []\nif LpStatus[problem.status] == \"Optimal\":\n    current_city = \"A\"\n    visited = set()\n    while len(visited) < len(cities):\n        visited.add(current_city)\n        for next_city in cities:\n            if current_city != next_city and x[current_city, next_city].varValue == 1:\n                route.append((current_city, next_city))\n                current_city = next_city\n                break\n    route.append((current_city, \"A\"))  # Return to the starting city\n\n# Output results\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": route,\n    \"feasible\": LpStatus[problem.status] == \"Optimal\"\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n\n1. **问题描述**：销售员需要从城市 A 出发，访问所有城市（B, C, D, E）恰好一次，并最终返回 A。目标是找到总距离最短的巡回路线。\n\n2. **数学模型**：我们将问题建模为旅行商问题 (TSP)。通过定义变量 \\( x_{ij} \\) 表示是否从城市 \\( i \\) 到城市 \\( j \\) 走一条路径，并以欧氏距离为权重，构建目标函数和约束条件。\n\n3. **代码实现**：\n   - 首先定义城市的坐标，并计算城市之间的欧氏距离。\n   - 使用 `pulp` 库定义线性规划问题，目标是最小化总距离。\n   - 添加约束条件，确保每个城市被访问一次且离开一次。\n   - 使用 `pulp` 求解问题，并提取最优解。\n\n4. **结果输出**：代码将最优解（包括总距离和巡回路线）保存到 `result.json` 文件中。文件路径通过环境变量 `RESULT_PATH` 指定，默认路径为当前目录下的 `result.json`。\n\n5. **运行方式**：运行代码后，检查 `result.json` 文件，查看最短总距离和对应的巡回路线。如果问题有解，`feasible` 字段为 `true`，否则为 `false`。",
+  "elapsed_s": 11.56,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/dfca6d7b9b2d40ff902b6e85acffb88a-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/dfca6d7b9b2d40ff902b6e85acffb88a-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 15 COLUMNS\nAt line 116 RHS\nAt line 127 BOUNDS\nAt line 148 ENDATA\nProblem MODEL has 10 rows, 20 columns and 40 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 17.6569 - 0.00 seconds\nCgl0004I processed model has 10 rows, 20 columns (2",
+  "stderr": "",
+  "result": {
+    "objective": 17.65685424949238,
+    "solution": [
+      [
+        "A",
+        "D"
+      ],
+      [
+        "D",
+        "C"
+      ],
+      [
+        "C",
+        "B"
+      ],
+      [
+        "B",
+        "E"
+      ],
+      [
+        "E",
+        "A"
+      ],
+      [
+        "A",
+        "A"
+      ]
+    ],
+    "feasible": true
+  },
+  "objective": 17.65685424949238,
+  "ground_truth": 17.6569,
+  "runnable": true,
+  "verdict": "optimal"
+}

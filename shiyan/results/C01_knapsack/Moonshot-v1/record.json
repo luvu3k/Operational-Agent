@@ -1,0 +1,29 @@
+{
+  "system": "Moonshot-v1",
+  "model": "moonshot-v1-8k",
+  "case": "C01_knapsack",
+  "nl": "有5件物品，重量分别是2、3、4、5、9，价值分别是3、4、5、8、10，背包最大承重是20，每件物品最多选一次。请问如何选择物品使装入背包的总价值最大？给出最大总价值和所选物品。",
+  "math_model": "Let x_i be a binary variable where x_i = 1 if item i is selected, and x_i = 0 otherwise. The objective is to maximize the total value:\n\nmaximize: 3x_1 + 4x_2 + 5x_3 + 8x_4 + 10x_5\n\nSubject to the constraints:\n2x_1 + 3x_2 + 4x_3 + 5x_4 + 9x_5 <= 20 (weight constraint)\nx_i ∈ {0, 1} for i = 1, 2, 3, 4, 5 (binary constraint)",
+  "code": "import pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"KnapsackProblem\", pulp.LpMaximize)\n\n# Define the items\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nitems = list(range(1, len(values) + 1))\n\n# Define the decision variables\nx = pulp.LpVariable.dicts(\"x\", items, cat='Binary')\n\n# Define the objective function\nproblem += pulp.lpSum([values[i-1] * x[i] for i in items]), \"TotalValue\"\n\n# Define the constraint\nproblem += pulp.lpSum([weights[i-1] * x[i] for i in items]) <= 20, \"WeightConstraint\"\n\n# Solve the problem\nproblem.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: pulp.value(x[i]) for i in items},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)",
+  "explanation": "这个问题是一个典型的背包问题，我们的目标是最大化背包中物品的总价值，同时不超过背包的最大承重。我们有5件物品，每件物品有其重量和价值。我们使用一个二进制变量x_i来表示是否选择第i件物品（1表示选择，0表示不选择）。\n\n我们首先定义了问题和决策变量，然后定义了目标函数，即最大化物品的总价值。接着，我们添加了一个约束条件，即所有选择的物品的重量之和不能超过背包的最大承重。\n\n使用PuLP库，我们可以轻松地定义和解决这个问题。最后，我们将解决方案（包括目标值、选择的物品和是否可行）写入一个JSON文件中。这样，我们就可以得到背包问题的最大总价值和所选物品。",
+  "raw_output": "===MODEL===\nLet x_i be a binary variable where x_i = 1 if item i is selected, and x_i = 0 otherwise. The objective is to maximize the total value:\n\nmaximize: 3x_1 + 4x_2 + 5x_3 + 8x_4 + 10x_5\n\nSubject to the constraints:\n2x_1 + 3x_2 + 4x_3 + 5x_4 + 9x_5 <= 20 (weight constraint)\nx_i ∈ {0, 1} for i = 1, 2, 3, 4, 5 (binary constraint)\n\n===CODE===\n```python\nimport pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"KnapsackProblem\", pulp.LpMaximize)\n\n# Define the items\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nitems = list(range(1, len(values) + 1))\n\n# Define the decision variables\nx = pulp.LpVariable.dicts(\"x\", items, cat='Binary')\n\n# Define the objective function\nproblem += pulp.lpSum([values[i-1] * x[i] for i in items]), \"TotalValue\"\n\n# Define the constraint\nproblem += pulp.lpSum([weights[i-1] * x[i] for i in items]) <= 20, \"WeightConstraint\"\n\n# Solve the problem\nproblem.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: pulp.value(x[i]) for i in items},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n这个问题是一个典型的背包问题，我们的目标是最大化背包中物品的总价值，同时不超过背包的最大承重。我们有5件物品，每件物品有其重量和价值。我们使用一个二进制变量x_i来表示是否选择第i件物品（1表示选择，0表示不选择）。\n\n我们首先定义了问题和决策变量，然后定义了目标函数，即最大化物品的总价值。接着，我们添加了一个约束条件，即所有选择的物品的重量之和不能超过背包的最大承重。\n\n使用PuLP库，我们可以轻松地定义和解决这个问题。最后，我们将解决方案（包括目标值、选择的物品和是否可行）写入一个JSON文件中。这样，我们就可以得到背包问题的最大总价值和所选物品。",
+  "elapsed_s": 9.6,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/802a3e19fdbb4610a25ff15be8336290-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/802a3e19fdbb4610a25ff15be8336290-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 6 COLUMNS\nAt line 27 RHS\nAt line 29 BOUNDS\nAt line 35 ENDATA\nProblem MODEL has 1 rows, 5 columns and 5 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 26.6667 - 0.00 seconds\nCgl0003I 0 fixed, 0 tightened bounds, 1 strengthened ",
+  "stderr": "",
+  "result": {
+    "objective": 26.0,
+    "solution": {
+      "1": 1.0,
+      "2": 0.0,
+      "3": 1.0,
+      "4": 1.0,
+      "5": 1.0
+    },
+    "feasible": true
+  },
+  "objective": 26.0,
+  "ground_truth": 26,
+  "runnable": true,
+  "verdict": "optimal"
+}

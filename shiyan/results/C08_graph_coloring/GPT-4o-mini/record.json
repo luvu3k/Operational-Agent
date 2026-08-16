@@ -1,0 +1,29 @@
+{
+  "system": "GPT-4o-mini",
+  "model": "gpt-4o-mini",
+  "case": "C08_graph_coloring",
+  "nl": "一个无向图有5个顶点，边为：1-2、1-3、2-3、3-4、4-5、2-5。请用最少的颜色给顶点着色，使相邻顶点颜色不同。给出最少颜色数和一种着色方案。",
+  "math_model": "设图的顶点集合为 \\( V = \\{1, 2, 3, 4, 5\\} \\)，边集合为 \\( E = \\{(1, 2), (1, 3), (2, 3), (3, 4), (4, 5), (2, 5)\\} \\)。我们需要为每个顶点分配一个颜色，使得相邻的顶点颜色不同。定义 \\( x_{i,j} \\) 为顶点 \\( i \\) 是否被着色为颜色 \\( j \\) 的二进制变量。目标是最小化使用的颜色数 \\( k \\)，同时满足以下约束：\n\n1. 每个顶点必须被着色：\n   \\[\n   \\sum_{j=1}^{k} x_{i,j} = 1, \\quad \\forall i \\in V\n   \\]\n\n2. 相邻顶点不能有相同的颜色：\n   \\[\n   x_{i,j} + x_{j,j} \\leq 1, \\quad \\forall (i,j) \\in E, \\forall j \\in \\{1, 2, \\ldots, k\\}\n   \\]\n\n3. 颜色数 \\( k \\) 的限制：\n   \\[\n   k \\geq 1\n   \\]",
+  "code": "import json\nfrom pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpBinary, LpStatusOptimal, LpStatus\n\n# 定义图的顶点和边\nvertices = [1, 2, 3, 4, 5]\nedges = [(1, 2), (1, 3), (2, 3), (3, 4), (4, 5), (2, 5)]\n\n# 创建线性规划问题\nproblem = LpProblem(\"Graph_Coloring\", LpMinimize)\n\n# 定义颜色数的变量\nk = LpVariable(\"k\", lowBound=1, cat='Integer')\n\n# 定义着色变量\nx = LpVariable.dicts(\"x\", (vertices, range(1, 6)), cat=LpBinary)\n\n# 目标函数：最小化颜色数\nproblem += k\n\n# 每个顶点必须被着色\nfor v in vertices:\n    problem += lpSum(x[v][j] for j in range(1, 6)) == 1\n\n# 相邻顶点不能有相同的颜色\nfor (i, j) in edges:\n    for color in range(1, 6):\n        problem += x[i][color] + x[j][color] <= 1\n\n# 颜色数的约束\nfor v in vertices:\n    for color in range(1, 6):\n        problem += x[v][color] <= k\n\n# 求解问题\nproblem.solve()\n\n# 提取结果\nresult = {\n    \"objective\": problem.objective.value(),\n    \"solution\": {v: [j for j in range(1, 6) if x[v][j].value() == 1][0] for v in vertices},\n    \"feasible\": LpStatus[problem.status] == 'Optimal'\n}\n\n# 将结果写入 JSON 文件\nimport os\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：我们需要为一个无向图的顶点着色，确保相邻的顶点颜色不同。图中有5个顶点和6条边。\n\n2. **数学模型**：我们定义了一个线性规划模型，目标是最小化使用的颜色数 \\( k \\)。我们为每个顶点和颜色定义了二进制变量，表示该顶点是否被着色为某种颜色。我们还添加了约束，确保每个顶点被着色且相邻顶点的颜色不同。\n\n3. **代码实现**：使用 `pulp` 库构建并求解线性规划问题。求解后，我们提取了最小颜色数、每个顶点的颜色方案，并将结果写入 JSON 文件。最终结果包括目标值、着色方案和可行性状态。",
+  "raw_output": "===MODEL===\n设图的顶点集合为 \\( V = \\{1, 2, 3, 4, 5\\} \\)，边集合为 \\( E = \\{(1, 2), (1, 3), (2, 3), (3, 4), (4, 5), (2, 5)\\} \\)。我们需要为每个顶点分配一个颜色，使得相邻的顶点颜色不同。定义 \\( x_{i,j} \\) 为顶点 \\( i \\) 是否被着色为颜色 \\( j \\) 的二进制变量。目标是最小化使用的颜色数 \\( k \\)，同时满足以下约束：\n\n1. 每个顶点必须被着色：\n   \\[\n   \\sum_{j=1}^{k} x_{i,j} = 1, \\quad \\forall i \\in V\n   \\]\n\n2. 相邻顶点不能有相同的颜色：\n   \\[\n   x_{i,j} + x_{j,j} \\leq 1, \\quad \\forall (i,j) \\in E, \\forall j \\in \\{1, 2, \\ldots, k\\}\n   \\]\n\n3. 颜色数 \\( k \\) 的限制：\n   \\[\n   k \\geq 1\n   \\]\n\n===CODE===\n```python\nimport json\nfrom pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpBinary, LpStatusOptimal, LpStatus\n\n# 定义图的顶点和边\nvertices = [1, 2, 3, 4, 5]\nedges = [(1, 2), (1, 3), (2, 3), (3, 4), (4, 5), (2, 5)]\n\n# 创建线性规划问题\nproblem = LpProblem(\"Graph_Coloring\", LpMinimize)\n\n# 定义颜色数的变量\nk = LpVariable(\"k\", lowBound=1, cat='Integer')\n\n# 定义着色变量\nx = LpVariable.dicts(\"x\", (vertices, range(1, 6)), cat=LpBinary)\n\n# 目标函数：最小化颜色数\nproblem += k\n\n# 每个顶点必须被着色\nfor v in vertices:\n    problem += lpSum(x[v][j] for j in range(1, 6)) == 1\n\n# 相邻顶点不能有相同的颜色\nfor (i, j) in edges:\n    for color in range(1, 6):\n        problem += x[i][color] + x[j][color] <= 1\n\n# 颜色数的约束\nfor v in vertices:\n    for color in range(1, 6):\n        problem += x[v][color] <= k\n\n# 求解问题\nproblem.solve()\n\n# 提取结果\nresult = {\n    \"objective\": problem.objective.value(),\n    \"solution\": {v: [j for j in range(1, 6) if x[v][j].value() == 1][0] for v in vertices},\n    \"feasible\": LpStatus[problem.status] == 'Optimal'\n}\n\n# 将结果写入 JSON 文件\nimport os\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. **问题描述**：我们需要为一个无向图的顶点着色，确保相邻的顶点颜色不同。图中有5个顶点和6条边。\n\n2. **数学模型**：我们定义了一个线性规划模型，目标是最小化使用的颜色数 \\( k \\)。我们为每个顶点和颜色定义了二进制变量，表示该顶点是否被着色为某种颜色。我们还添加了约束，确保每个顶点被着色且相邻顶点的颜色不同。\n\n3. **代码实现**：使用 `pulp` 库构建并求解线性规划问题。求解后，我们提取了最小颜色数、每个顶点的颜色方案，并将结果写入 JSON 文件。最终结果包括目标值、着色方案和可行性状态。",
+  "elapsed_s": 7.09,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/bfaf7cfb40a543cfb1b1b650638fd1d7-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/bfaf7cfb40a543cfb1b1b650638fd1d7-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 65 COLUMNS\nAt line 254 RHS\nAt line 315 BOUNDS\nAt line 342 ENDATA\nProblem MODEL has 60 rows, 26 columns and 135 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 1 - 0.00 seconds\nCgl0003I 0 fixed, 0 tightened bounds, 5 strengthened row",
+  "stderr": "",
+  "result": {
+    "objective": 1.0,
+    "solution": {
+      "1": 4,
+      "2": 1,
+      "3": 2,
+      "4": 3,
+      "5": 2
+    },
+    "feasible": true
+  },
+  "objective": 1.0,
+  "ground_truth": 3,
+  "runnable": true,
+  "verdict": "invalid_below_optimum"
+}

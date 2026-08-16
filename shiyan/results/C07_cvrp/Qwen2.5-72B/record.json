@@ -1,0 +1,19 @@
+{
+  "system": "Qwen2.5-72B",
+  "model": "Qwen/Qwen2.5-72B-Instruct",
+  "case": "C07_cvrp",
+  "nl": "一个配送中心(坐标0,0)有若干辆容量为10的车。有4个客户，坐标和需求分别是：C1(2,3)需求5，C2(5,4)需求4，C3(-3,5)需求3，C4(-4,-2)需求6。每辆车从配送中心出发服务若干客户后返回，车上装载不超过容量。距离为欧氏距离。请给出满足所有需求、总行驶距离尽量小的路线方案与总距离。",
+  "math_model": "",
+  "code": "",
+  "explanation": "",
+  "raw_output": "",
+  "elapsed_s": 182.0,
+  "returncode": -1,
+  "stdout": "",
+  "stderr": "APITimeoutError: Request timed out.",
+  "result": {},
+  "objective": null,
+  "ground_truth": null,
+  "runnable": false,
+  "verdict": "no_result"
+}

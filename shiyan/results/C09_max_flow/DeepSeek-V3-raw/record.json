@@ -1,0 +1,29 @@
+{
+  "system": "DeepSeek-V3-raw",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C09_max_flow",
+  "nl": "一个有向网络，源点s、汇点t。边容量：s->a=10，s->b=5，a->b=15，a->t=10，b->t=10。请求从s到t的最大流量，并给出各边的流量分配。",
+  "math_model": "最大流问题可以建模为线性规划：\n决策变量：f_ij 表示边i->j的流量\n目标：最大化从s流出的总流量 (max f_sa + f_sb)\n约束：\n1. 容量限制：0 ≤ f_ij ≤ c_ij (每条边的流量不超过容量)\n2. 流量守恒：对于非源非汇节点，流入=流出\n   - a点：f_sa = f_ab + f_at\n   - b点：f_sb + f_ab = f_bt\n3. 非负性：所有f_ij ≥ 0",
+  "code": "import pulp\nimport json\nimport os\n\n# 创建问题\nprob = pulp.LpProblem(\"Max_Flow\", pulp.LpMaximize)\n\n# 定义边和容量\nedges = {\n    ('s', 'a'): 10,\n    ('s', 'b'): 5,\n    ('a', 'b'): 15,\n    ('a', 't'): 10,\n    ('b', 't'): 10\n}\n\n# 创建变量\nflow_vars = pulp.LpVariable.dicts(\"Flow\", edges.keys(), lowBound=0, upBound=None)\n\n# 目标函数：最大化从s流出的流量\nprob += flow_vars[('s','a')] + flow_vars[('s','b')], \"Total_Flow\"\n\n# 容量约束\nfor edge, cap in edges.items():\n    prob += flow_vars[edge] <= cap, f\"Cap_{edge[0]}_{edge[1]}\"\n\n# 流量守恒约束\nprob += flow_vars[('s','a')] == flow_vars[('a','b')] + flow_vars[('a','t')], \"Node_a_conservation\"\nprob += flow_vars[('s','b')] + flow_vars[('a','b')] == flow_vars[('b','t')], \"Node_b_conservation\"\n\n# 求解\nprob.solve()\n\n# 准备结果\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {f\"{k[0]}->{k[1]}\": v.varValue for k, v in flow_vars.items()},\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# 写入文件\nwith open(os.getenv('RESULT_PATH', 'result.json'), 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. 问题描述：我们有一个水管网络，需要计算从水源s到终点t的最大水流量。每条管道有最大流量限制。\n\n2. 解决步骤：\n   - 从水源s出发，有两条管道：s→a(容量10)和s→b(容量5)\n   - 节点a可以分流到a→b(容量15)和a→t(容量10)\n   - 节点b接收来自s→b和a→b的流量，然后通过b→t(容量10)流出\n   - 系统会自动平衡各管道的流量，确保不超容量且每个中间节点流入=流出\n\n3. 最终结果：\n   - 最大流量为15单位\n   - 具体分配：s→a流10，s→b流5，a→b流5，a→t流5，b→t流10\n   - 这表示系统达到了最优配置，充分利用了所有可能的路径",
+  "raw_output": "===MODEL===\n最大流问题可以建模为线性规划：\n决策变量：f_ij 表示边i->j的流量\n目标：最大化从s流出的总流量 (max f_sa + f_sb)\n约束：\n1. 容量限制：0 ≤ f_ij ≤ c_ij (每条边的流量不超过容量)\n2. 流量守恒：对于非源非汇节点，流入=流出\n   - a点：f_sa = f_ab + f_at\n   - b点：f_sb + f_ab = f_bt\n3. 非负性：所有f_ij ≥ 0\n\n===CODE===\nimport pulp\nimport json\nimport os\n\n# 创建问题\nprob = pulp.LpProblem(\"Max_Flow\", pulp.LpMaximize)\n\n# 定义边和容量\nedges = {\n    ('s', 'a'): 10,\n    ('s', 'b'): 5,\n    ('a', 'b'): 15,\n    ('a', 't'): 10,\n    ('b', 't'): 10\n}\n\n# 创建变量\nflow_vars = pulp.LpVariable.dicts(\"Flow\", edges.keys(), lowBound=0, upBound=None)\n\n# 目标函数：最大化从s流出的流量\nprob += flow_vars[('s','a')] + flow_vars[('s','b')], \"Total_Flow\"\n\n# 容量约束\nfor edge, cap in edges.items():\n    prob += flow_vars[edge] <= cap, f\"Cap_{edge[0]}_{edge[1]}\"\n\n# 流量守恒约束\nprob += flow_vars[('s','a')] == flow_vars[('a','b')] + flow_vars[('a','t')], \"Node_a_conservation\"\nprob += flow_vars[('s','b')] + flow_vars[('a','b')] == flow_vars[('b','t')], \"Node_b_conservation\"\n\n# 求解\nprob.solve()\n\n# 准备结果\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {f\"{k[0]}->{k[1]}\": v.varValue for k, v in flow_vars.items()},\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# 写入文件\nwith open(os.getenv('RESULT_PATH', 'result.json'), 'w') as f:\n    json.dump(result, f)\n\n===EXPLANATION===\n1. 问题描述：我们有一个水管网络，需要计算从水源s到终点t的最大水流量。每条管道有最大流量限制。\n\n2. 解决步骤：\n   - 从水源s出发，有两条管道：s→a(容量10)和s→b(容量5)\n   - 节点a可以分流到a→b(容量15)和a→t(容量10)\n   - 节点b接收来自s→b和a→b的流量，然后通过b→t(容量10)流出\n   - 系统会自动平衡各管道的流量，确保不超容量且每个中间节点流入=流出\n\n3. 最终结果：\n   - 最大流量为15单位\n   - 具体分配：s→a流10，s→b流5，a→b流5，a→t流5，b→t流10\n   - 这表示系统达到了最优配置，充分利用了所有可能的路径",
+  "elapsed_s": 23.62,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/91efb701dad5478fb2fed9539e5d6977-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/91efb701dad5478fb2fed9539e5d6977-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 12 COLUMNS\nAt line 26 RHS\nAt line 34 BOUNDS\nAt line 35 ENDATA\nProblem MODEL has 7 rows, 5 columns and 11 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nPresolve 2 (-5) rows, 3 (-2) columns and 4 (-7) elements\n0  Obj -0 Dual inf 1.999998 (2)\nOptimal - objec",
+  "stderr": "",
+  "result": {
+    "objective": 15.0,
+    "solution": {
+      "s->a": 10.0,
+      "s->b": 5.0,
+      "a->b": 0.0,
+      "a->t": 10.0,
+      "b->t": 5.0
+    },
+    "feasible": true
+  },
+  "objective": 15.0,
+  "ground_truth": 15,
+  "runnable": true,
+  "verdict": "optimal"
+}

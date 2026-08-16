@@ -1,0 +1,28 @@
+{
+  "system": "GPT-4o-mini",
+  "model": "gpt-4o-mini",
+  "case": "C05_set_cover",
+  "nl": "全集是{1,2,3,4,5}。有4个子集：S1={1,2,3}，S2={2,4}，S3={3,4}，S4={4,5}。请选择数量最少的子集，使它们的并集覆盖全集。给出最少子集数量和选择方案。",
+  "math_model": "设 \\( S = \\{ S_1, S_2, S_3, S_4 \\} \\) 为子集集合，其中：\n- \\( S_1 = \\{ 1, 2, 3 \\} \\)\n- \\( S_2 = \\{ 2, 4 \\} \\)\n- \\( S_3 = \\{ 3, 4 \\} \\)\n- \\( S_4 = \\{ 4, 5 \\} \\)\n\n目标是选择最少数量的子集，使得它们的并集覆盖全集 \\( U = \\{ 1, 2, 3, 4, 5 \\} \\)。\n\n定义决策变量：\n- \\( x_i \\) 为二进制变量，表示是否选择子集 \\( S_i \\)（1 表示选择，0 表示不选择）。\n\n目标函数：\n\\[\n\\text{最小化} \\quad z = x_1 + x_2 + x_3 + x_4\n\\]\n\n约束条件：\n\\[\n\\begin{align*}\nx_1 + x_2 + x_3 + x_4 & \\geq 1 \\quad \\text{(覆盖元素 1)} \\\\\nx_1 + x_2 & \\geq 1 \\quad \\text{(覆盖元素 2)} \\\\\nx_1 + x_3 & \\geq 1 \\quad \\text{(覆盖元素 3)} \\\\\nx_2 + x_3 + x_4 & \\geq 1 \\quad \\text{(覆盖元素 4)} \\\\\nx_4 & \\geq 1 \\quad \\text{(覆盖元素 5)} \\\\\nx_i & \\in \\{0, 1\\}, \\quad i = 1, 2, 3, 4\n\\end{align*}\n\\]",
+  "code": "import json\nfrom pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpStatus, LpBinary, value\n\n# 定义问题\nproblem = LpProblem(\"SetCoveringProblem\", LpMinimize)\n\n# 定义变量\nx1 = LpVariable('x1', cat=LpBinary)\nx2 = LpVariable('x2', cat=LpBinary)\nx3 = LpVariable('x3', cat=LpBinary)\nx4 = LpVariable('x4', cat=LpBinary)\n\n# 目标函数\nproblem += lpSum([x1, x2, x3, x4]), \"MinimizeNumberOfSubsets\"\n\n# 约束条件\nproblem += x1 + x2 >= 1, \"CoverElement1\"\nproblem += x1 + x2 >= 1, \"CoverElement2\"\nproblem += x1 + x3 >= 1, \"CoverElement3\"\nproblem += x2 + x3 + x4 >= 1, \"CoverElement4\"\nproblem += x4 >= 1, \"CoverElement5\"\n\n# 求解问题\nproblem.solve()\n\n# 结果\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": {\n        \"S1\": int(x1.varValue),\n        \"S2\": int(x2.varValue),\n        \"S3\": int(x3.varValue),\n        \"S4\": int(x4.varValue)\n    },\n    \"feasible\": LpStatus[problem.status] == 'Optimal'\n}\n\n# 将结果写入 JSON 文件\nimport os\nRESULT_PATH = os.getenv('RESULT_PATH', 'result.json')\nwith open(RESULT_PATH, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：我们需要从给定的子集中选择最少的几个，以确保它们的并集能够覆盖全集 {1, 2, 3, 4, 5}。这可以通过构建一个数学模型来实现。\n\n2. **数学模型**：我们定义了一个目标函数，旨在最小化所选择的子集数量。同时，我们设置了一系列约束条件，确保每个元素在全集中至少被一个子集覆盖。\n\n3. **Python 代码**：使用 `pulp` 库来构建和求解这个线性规划问题。代码中定义了决策变量、目标函数和约束条件，最后求解并将结果写入 JSON 文件。结果包括最小子集数量、选择的子集方案以及是否存在可行解。",
+  "raw_output": "===MODEL===\n设 \\( S = \\{ S_1, S_2, S_3, S_4 \\} \\) 为子集集合，其中：\n- \\( S_1 = \\{ 1, 2, 3 \\} \\)\n- \\( S_2 = \\{ 2, 4 \\} \\)\n- \\( S_3 = \\{ 3, 4 \\} \\)\n- \\( S_4 = \\{ 4, 5 \\} \\)\n\n目标是选择最少数量的子集，使得它们的并集覆盖全集 \\( U = \\{ 1, 2, 3, 4, 5 \\} \\)。\n\n定义决策变量：\n- \\( x_i \\) 为二进制变量，表示是否选择子集 \\( S_i \\)（1 表示选择，0 表示不选择）。\n\n目标函数：\n\\[\n\\text{最小化} \\quad z = x_1 + x_2 + x_3 + x_4\n\\]\n\n约束条件：\n\\[\n\\begin{align*}\nx_1 + x_2 + x_3 + x_4 & \\geq 1 \\quad \\text{(覆盖元素 1)} \\\\\nx_1 + x_2 & \\geq 1 \\quad \\text{(覆盖元素 2)} \\\\\nx_1 + x_3 & \\geq 1 \\quad \\text{(覆盖元素 3)} \\\\\nx_2 + x_3 + x_4 & \\geq 1 \\quad \\text{(覆盖元素 4)} \\\\\nx_4 & \\geq 1 \\quad \\text{(覆盖元素 5)} \\\\\nx_i & \\in \\{0, 1\\}, \\quad i = 1, 2, 3, 4\n\\end{align*}\n\\]\n\n===CODE===\n```python\nimport json\nfrom pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpStatus, LpBinary, value\n\n# 定义问题\nproblem = LpProblem(\"SetCoveringProblem\", LpMinimize)\n\n# 定义变量\nx1 = LpVariable('x1', cat=LpBinary)\nx2 = LpVariable('x2', cat=LpBinary)\nx3 = LpVariable('x3', cat=LpBinary)\nx4 = LpVariable('x4', cat=LpBinary)\n\n# 目标函数\nproblem += lpSum([x1, x2, x3, x4]), \"MinimizeNumberOfSubsets\"\n\n# 约束条件\nproblem += x1 + x2 >= 1, \"CoverElement1\"\nproblem += x1 + x2 >= 1, \"CoverElement2\"\nproblem += x1 + x3 >= 1, \"CoverElement3\"\nproblem += x2 + x3 + x4 >= 1, \"CoverElement4\"\nproblem += x4 >= 1, \"CoverElement5\"\n\n# 求解问题\nproblem.solve()\n\n# 结果\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": {\n        \"S1\": int(x1.varValue),\n        \"S2\": int(x2.varValue),\n        \"S3\": int(x3.varValue),\n        \"S4\": int(x4.varValue)\n    },\n    \"feasible\": LpStatus[problem.status] == 'Optimal'\n}\n\n# 将结果写入 JSON 文件\nimport os\nRESULT_PATH = os.getenv('RESULT_PATH', 'result.json')\nwith open(RESULT_PATH, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. **问题描述**：我们需要从给定的子集中选择最少的几个，以确保它们的并集能够覆盖全集 {1, 2, 3, 4, 5}。这可以通过构建一个数学模型来实现。\n\n2. **数学模型**：我们定义了一个目标函数，旨在最小化所选择的子集数量。同时，我们设置了一系列约束条件，确保每个元素在全集中至少被一个子集覆盖。\n\n3. **Python 代码**：使用 `pulp` 库来构建和求解这个线性规划问题。代码中定义了决策变量、目标函数和约束条件，最后求解并将结果写入 JSON 文件。结果包括最小子集数量、选择的子集方案以及是否存在可行解。",
+  "elapsed_s": 8.05,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/4a8a28148cef4e6ab2fb3b9bea20b071-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/4a8a28148cef4e6ab2fb3b9bea20b071-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 10 COLUMNS\nAt line 33 RHS\nAt line 39 BOUNDS\nAt line 44 ENDATA\nProblem MODEL has 5 rows, 4 columns and 10 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 2 - 0.00 seconds\nCgl0004I processed model has 2 rows, 3 columns (3 integer (3 o",
+  "stderr": "",
+  "result": {
+    "objective": 2.0,
+    "solution": {
+      "S1": 1,
+      "S2": 0,
+      "S3": 0,
+      "S4": 1
+    },
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

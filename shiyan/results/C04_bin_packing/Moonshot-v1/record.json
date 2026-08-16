@@ -1,0 +1,48 @@
+{
+  "system": "Moonshot-v1",
+  "model": "moonshot-v1-8k",
+  "case": "C04_bin_packing",
+  "nl": "有物品体积分别为4、8、1、4、2、1，箱子容量为10。请用最少的箱子把所有物品装完，每个箱子里物品体积之和不超过10。给出所需最少箱子数和装箱方案。",
+  "math_model": "Let x_i be a binary variable that equals 1 if item i is placed in a box, and 0 otherwise. Let y_j be a binary variable that equals 1 if box j is used, and 0 otherwise. Let V_i be the volume of item i, and C be the capacity of the box.\n\nObjective: Minimize the number of boxes used, i.e., minimize sum(y_j).\n\nConstraints:\n1. Each item must be placed in exactly one box: sum(x_i) = 1 for all items.\n2. The volume of items in each box must not exceed the box capacity: sum(V_i * x_i) <= C * y_j for all boxes.\n3. x_i and y_j are binary variables.",
+  "code": "import pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimize_Bins\", pulp.LpMinimize)\n\n# Define the items and their volumes\nitems = [4, 8, 1, 4, 2, 1]\nn_items = len(items)\n\n# Define the box capacity\nbox_capacity = 10\n\n# Define the binary variables for each item in each box\nx = pulp.LpVariable.dicts(\"x\", (range(n_items), range(n_items + 1)), cat='Binary')\n\n# Define the binary variables for each box\ny = pulp.LpVariable.dicts(\"y\", (range(n_items + 1)), cat='Binary')\n\n# Objective function: minimize the number of boxes used\nproblem += pulp.lpSum(y[i] for i in range(n_items + 1))\n\n# Constraint 1: each item must be placed in exactly one box\nfor i in range(n_items):\n    problem += pulp.lpSum(x[i][j] for j in range(n_items + 1)) == 1\n\n# Constraint 2: the volume of items in each box must not exceed the box capacity\nfor j in range(n_items + 1):\n    problem += pulp.lpSum(items[i] * x[i][j] for i in range(n_items)) <= box_capacity * y[j]\n\n# Solve the problem\nproblem.solve()\n\n# Store the result in a dictionary\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": [],\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\n# Store the solution in the result dictionary\nfor i in range(n_items):\n    for j in range(n_items + 1):\n        if pulp.value(x[i][j]) == 1:\n            result[\"solution\"].append((i, j))\n\n# Write the result to a JSON file\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)",
+  "explanation": "这个问题是一个经典的装箱问题，目标是使用最少的箱子来装下所有物品，同时每个箱子的总体积不超过箱子的容量限制。我们使用线性规划来解决这个问题。\n\n1. 我们定义了两个变量：x_i 和 y_j。x_i 表示第 i 个物品是否被放入第 j 个箱子中，y_j 表示第 j 个箱子是否被使用。\n\n2. 我们的目标是最小化使用的箱子数量，即最小化所有 y_j 的和。\n\n3. 我们有两个约束条件：\n   - 每个物品必须被放入一个箱子中，即对于所有物品，x_i 的和必须等于 1。\n   - 每个箱子中的物品总体积不能超过箱子的容量，即对于所有箱子，物品体积乘以 x_i 的和不能超过箱子容量乘以 y_j。\n\n4. 我们使用 Python 的 pulp 库来定义和解决这个问题。首先，我们定义了问题、物品、箱子容量和变量。然后，我们定义了目标函数和约束条件。最后，我们解决了这个问题，并将结果存储在一个字典中，然后写入一个 JSON 文件。\n\n5. 结果字典包含目标值（使用的箱子数量）、解决方案（每个物品放入的箱子）和是否可行（问题是否有最优解）。",
+  "raw_output": "===MODEL===\nLet x_i be a binary variable that equals 1 if item i is placed in a box, and 0 otherwise. Let y_j be a binary variable that equals 1 if box j is used, and 0 otherwise. Let V_i be the volume of item i, and C be the capacity of the box.\n\nObjective: Minimize the number of boxes used, i.e., minimize sum(y_j).\n\nConstraints:\n1. Each item must be placed in exactly one box: sum(x_i) = 1 for all items.\n2. The volume of items in each box must not exceed the box capacity: sum(V_i * x_i) <= C * y_j for all boxes.\n3. x_i and y_j are binary variables.\n\n===CODE===\n```python\nimport pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimize_Bins\", pulp.LpMinimize)\n\n# Define the items and their volumes\nitems = [4, 8, 1, 4, 2, 1]\nn_items = len(items)\n\n# Define the box capacity\nbox_capacity = 10\n\n# Define the binary variables for each item in each box\nx = pulp.LpVariable.dicts(\"x\", (range(n_items), range(n_items + 1)), cat='Binary')\n\n# Define the binary variables for each box\ny = pulp.LpVariable.dicts(\"y\", (range(n_items + 1)), cat='Binary')\n\n# Objective function: minimize the number of boxes used\nproblem += pulp.lpSum(y[i] for i in range(n_items + 1))\n\n# Constraint 1: each item must be placed in exactly one box\nfor i in range(n_items):\n    problem += pulp.lpSum(x[i][j] for j in range(n_items + 1)) == 1\n\n# Constraint 2: the volume of items in each box must not exceed the box capacity\nfor j in range(n_items + 1):\n    problem += pulp.lpSum(items[i] * x[i][j] for i in range(n_items)) <= box_capacity * y[j]\n\n# Solve the problem\nproblem.solve()\n\n# Store the result in a dictionary\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": [],\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\n# Store the solution in the result dictionary\nfor i in range(n_items):\n    for j in range(n_items + 1):\n        if pulp.value(x[i][j]) == 1:\n            result[\"solution\"].append((i, j))\n\n# Write the result to a JSON file\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n这个问题是一个经典的装箱问题，目标是使用最少的箱子来装下所有物品，同时每个箱子的总体积不超过箱子的容量限制。我们使用线性规划来解决这个问题。\n\n1. 我们定义了两个变量：x_i 和 y_j。x_i 表示第 i 个物品是否被放入第 j 个箱子中，y_j 表示第 j 个箱子是否被使用。\n\n2. 我们的目标是最小化使用的箱子数量，即最小化所有 y_j 的和。\n\n3. 我们有两个约束条件：\n   - 每个物品必须被放入一个箱子中，即对于所有物品，x_i 的和必须等于 1。\n   - 每个箱子中的物品总体积不能超过箱子的容量，即对于所有箱子，物品体积乘以 x_i 的和不能超过箱子容量乘以 y_j。\n\n4. 我们使用 Python 的 pulp 库来定义和解决这个问题。首先，我们定义了问题、物品、箱子容量和变量。然后，我们定义了目标函数和约束条件。最后，我们解决了这个问题，并将结果存储在一个字典中，然后写入一个 JSON 文件。\n\n5. 结果字典包含目标值（使用的箱子数量）、解决方案（每个物品放入的箱子）和是否可行（问题是否有最优解）。",
+  "elapsed_s": 14.9,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/f79e489f93cb4f3e98b19e1a597e8efd-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/f79e489f93cb4f3e98b19e1a597e8efd-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 18 COLUMNS\nAt line 215 RHS\nAt line 229 BOUNDS\nAt line 279 ENDATA\nProblem MODEL has 13 rows, 49 columns and 91 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 2 - 0.00 seconds\nCgl0004I processed model has 13 rows, 49 columns (49 inte",
+  "stderr": "",
+  "result": {
+    "objective": 2.0,
+    "solution": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        5,
+        0
+      ]
+    ],
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

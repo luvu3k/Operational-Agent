@@ -1,0 +1,20 @@
+{
+    "objective": 1.0,
+    "solution": {
+        "Box 1": [
+            4,
+            1,
+            1
+        ],
+        "Box 2": [
+            8
+        ],
+        "Box 25": [
+            2
+        ],
+        "Box 81": [
+            4
+        ]
+    },
+    "feasible": true
+}

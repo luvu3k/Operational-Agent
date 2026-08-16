@@ -1,0 +1,29 @@
+{
+  "system": "Moonshot-v1",
+  "model": "moonshot-v1-8k",
+  "case": "C09_max_flow",
+  "nl": "一个有向网络，源点s、汇点t。边容量：s->a=10，s->b=5，a->b=15，a->t=10，b->t=10。请求从s到t的最大流量，并给出各边的流量分配。",
+  "math_model": "Let x_sa, x_sb, x_ab, x_at, x_bt be the flow on the edges s->a, s->b, a->b, a->t, b->t respectively. The objective is to maximize the flow from s to t, which can be formulated as:\n\nMaximize: x_at + x_bt\n\nSubject to:\n1. Capacity constraints:\n   x_sa <= 10\n   x_sb <= 5\n   x_ab <= 15\n   x_at <= 10\n   x_bt <= 10\n\n2. Flow conservation constraints:\n   x_sa - x_ab = x_at\n   x_sb - x_ab + x_bt = x_bt\n\n3. Non-negativity constraints:\n   x_sa, x_sb, x_ab, x_at, x_bt >= 0",
+  "code": "import pulp\nimport json\nimport os\n\n# Define the problem\nprob = pulp.LpProblem(\"MaxFlow\", pulp.LpMaximize)\n\n# Define the variables\nx_sa = pulp.LpVariable(\"x_sa\", lowBound=0, upBound=10, cat='Continuous')\nx_sb = pulp.LpVariable(\"x_sb\", lowBound=0, upBound=5, cat='Continuous')\nx_ab = pulp.LpVariable(\"x_ab\", lowBound=0, upBound=15, cat='Continuous')\nx_at = pulp.LpVariable(\"x_at\", lowBound=0, upBound=10, cat='Continuous')\nx_bt = pulp.LpVariable(\"x_bt\", lowBound=0, upBound=10, cat='Continuous')\n\n# Objective function\nprob += x_at + x_bt, \"Total Flow\"\n\n# Constraints\nprob += x_sa - x_ab == x_at, \"Flow conservation at a\"\nprob += x_sb - x_ab + x_bt == x_bt, \"Flow conservation at b\"\n\n# Solve the problem\nprob.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {\n        \"x_sa\": pulp.value(x_sa),\n        \"x_sb\": pulp.value(x_sb),\n        \"x_ab\": pulp.value(x_ab),\n        \"x_at\": pulp.value(x_at),\n        \"x_bt\": pulp.value(x_bt)\n    },\n    \"feasible\": pulp.LpStatus[prob.status] == \"Optimal\"\n}\n\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)",
+  "explanation": "这个优化问题是一个典型的最大流问题，我们的目标是找到从源点s到汇点t的最大流量。我们定义了五个变量来表示每条边上的流量，并根据边的容量和流量守恒定律建立了约束条件。我们使用线性规划库pulp来求解这个问题。\n\n1. 我们首先定义了问题和变量，变量的上界是边的容量，下界是0，因为流量不能是负数。\n\n2. 然后我们定义了目标函数，即最大化从s到t的流量。\n\n3. 接下来我们添加了两个流量守恒的约束条件，确保每个节点的流入量等于流出量。\n\n4. 我们使用pulp的求解器来求解这个问题，并得到了最优解。\n\n5. 最后，我们将结果写入一个JSON文件中，包括目标函数值（最大流量）、每条边上的流量分配以及解的可行性。",
+  "raw_output": "===MODEL===\nLet x_sa, x_sb, x_ab, x_at, x_bt be the flow on the edges s->a, s->b, a->b, a->t, b->t respectively. The objective is to maximize the flow from s to t, which can be formulated as:\n\nMaximize: x_at + x_bt\n\nSubject to:\n1. Capacity constraints:\n   x_sa <= 10\n   x_sb <= 5\n   x_ab <= 15\n   x_at <= 10\n   x_bt <= 10\n\n2. Flow conservation constraints:\n   x_sa - x_ab = x_at\n   x_sb - x_ab + x_bt = x_bt\n\n3. Non-negativity constraints:\n   x_sa, x_sb, x_ab, x_at, x_bt >= 0\n\n===CODE===\n```python\nimport pulp\nimport json\nimport os\n\n# Define the problem\nprob = pulp.LpProblem(\"MaxFlow\", pulp.LpMaximize)\n\n# Define the variables\nx_sa = pulp.LpVariable(\"x_sa\", lowBound=0, upBound=10, cat='Continuous')\nx_sb = pulp.LpVariable(\"x_sb\", lowBound=0, upBound=5, cat='Continuous')\nx_ab = pulp.LpVariable(\"x_ab\", lowBound=0, upBound=15, cat='Continuous')\nx_at = pulp.LpVariable(\"x_at\", lowBound=0, upBound=10, cat='Continuous')\nx_bt = pulp.LpVariable(\"x_bt\", lowBound=0, upBound=10, cat='Continuous')\n\n# Objective function\nprob += x_at + x_bt, \"Total Flow\"\n\n# Constraints\nprob += x_sa - x_ab == x_at, \"Flow conservation at a\"\nprob += x_sb - x_ab + x_bt == x_bt, \"Flow conservation at b\"\n\n# Solve the problem\nprob.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {\n        \"x_sa\": pulp.value(x_sa),\n        \"x_sb\": pulp.value(x_sb),\n        \"x_ab\": pulp.value(x_ab),\n        \"x_at\": pulp.value(x_at),\n        \"x_bt\": pulp.value(x_bt)\n    },\n    \"feasible\": pulp.LpStatus[prob.status] == \"Optimal\"\n}\n\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n这个优化问题是一个典型的最大流问题，我们的目标是找到从源点s到汇点t的最大流量。我们定义了五个变量来表示每条边上的流量，并根据边的容量和流量守恒定律建立了约束条件。我们使用线性规划库pulp来求解这个问题。\n\n1. 我们首先定义了问题和变量，变量的上界是边的容量，下界是0，因为流量不能是负数。\n\n2. 然后我们定义了目标函数，即最大化从s到t的流量。\n\n3. 接下来我们添加了两个流量守恒的约束条件，确保每个节点的流入量等于流出量。\n\n4. 我们使用pulp的求解器来求解这个问题，并得到了最优解。\n\n5. 最后，我们将结果写入一个JSON文件中，包括目标函数值（最大流量）、每条边上的流量分配以及解的可行性。",
+  "elapsed_s": 12.5,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/97b4d6454aa144d4834c380daf8bd025-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/97b4d6454aa144d4834c380daf8bd025-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 7 COLUMNS\nAt line 16 RHS\nAt line 19 BOUNDS\nAt line 25 ENDATA\nProblem MODEL has 2 rows, 5 columns and 5 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nPresolve 0 (-2) rows, 0 (-5) columns and 0 (-5) elements\nEmpty problem - 0 rows, 0 columns and 0 elements\n",
+  "stderr": "",
+  "result": {
+    "objective": 20.0,
+    "solution": {
+      "x_sa": 10.0,
+      "x_sb": 0.0,
+      "x_ab": 0.0,
+      "x_at": 10.0,
+      "x_bt": 10.0
+    },
+    "feasible": true
+  },
+  "objective": 20.0,
+  "ground_truth": 15,
+  "runnable": true,
+  "verdict": "invalid_above_optimum"
+}

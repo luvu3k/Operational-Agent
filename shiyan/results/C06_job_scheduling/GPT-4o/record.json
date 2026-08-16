@@ -1,0 +1,40 @@
+{
+  "system": "GPT-4o",
+  "model": "gpt-4o",
+  "case": "C06_job_scheduling",
+  "nl": "一台机器要加工4个工件，加工时间分别是3、1、2、4，交货期分别是4、2、6、8。工件顺序加工不可中断。请安排加工顺序，使总延误（每个工件完工时间超过交货期的部分之和）最小，并给出最小总延误和加工顺序。",
+  "math_model": "定义变量：\n- \\( x_i \\): 工件 \\( i \\) 在加工顺序中的位置，\\( x_i \\in \\{1, 2, 3, 4\\} \\)。\n- \\( C_i \\): 工件 \\( i \\) 的完工时间。\n- \\( L_i \\): 工件 \\( i \\) 的延误时间，\\( L_i = \\max(0, C_i - d_i) \\)。\n\n参数：\n- \\( p_i \\): 工件 \\( i \\) 的加工时间，分别为 \\( p_1 = 3, p_2 = 1, p_3 = 2, p_4 = 4 \\)。\n- \\( d_i \\): 工件 \\( i \\) 的交货期，分别为 \\( d_1 = 4, d_2 = 2, d_3 = 6, d_4 = 8 \\)。\n\n目标：\n- 最小化总延误 \\( \\sum_{i=1}^4 L_i \\)。\n\n约束：\n1. 每个工件必须有且仅有一个加工顺序位置。\n2. 每个加工顺序位置必须分配给一个工件。\n3. 完工时间 \\( C_i \\) 由加工顺序和加工时间决定。\n4. 延误时间 \\( L_i \\) 由完工时间和交货期决定。",
+  "code": "import os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Parameters\nprocessing_times = [3, 1, 2, 4]\ndue_dates = [4, 2, 6, 8]\nnum_jobs = len(processing_times)\n\n# Problem definition\nprob = LpProblem(\"Minimize_Total_Delay\", LpMinimize)\n\n# Decision variables\nx = [[LpVariable(f\"x_{i}_{j}\", cat=LpBinary) for j in range(num_jobs)] for i in range(num_jobs)]\nC = [LpVariable(f\"C_{i}\", lowBound=0) for i in range(num_jobs)]\nL = [LpVariable(f\"L_{i}\", lowBound=0) for i in range(num_jobs)]\n\n# Objective function: Minimize total delay\nprob += lpSum(L)\n\n# Constraints\n# Each job is assigned to exactly one position\nfor i in range(num_jobs):\n    prob += lpSum(x[i][j] for j in range(num_jobs)) == 1\n\n# Each position is assigned to exactly one job\nfor j in range(num_jobs):\n    prob += lpSum(x[i][j] for i in range(num_jobs)) == 1\n\n# Completion time constraints\nfor i in range(num_jobs):\n    prob += C[i] == lpSum(processing_times[k] * x[k][j] for k in range(num_jobs) for j in range(i + 1))\n\n# Lateness constraints\nfor i in range(num_jobs):\n    prob += L[i] >= C[i] - due_dates[i]\n    prob += L[i] >= 0\n\n# Solve the problem\nprob.solve()\n\n# Extract results\nsolution = [j for i in range(num_jobs) for j in range(num_jobs) if x[i][j].varValue == 1]\ncompletion_times = [value(C[i]) for i in range(num_jobs)]\nlateness = [value(L[i]) for i in range(num_jobs)]\ntotal_delay = sum(lateness)\n\n# Output results\nresult = {\n    \"objective\": total_delay,\n    \"solution\": solution,\n    \"feasible\": prob.status == 1,\n    \"completion_times\": completion_times,\n    \"lateness\": lateness\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题建模**：\n   - 我们需要安排4个工件的加工顺序，使得总延误最小。延误是指工件的完工时间超过其交货期的部分。\n   - 决策变量 \\( x_{i,j} \\) 表示工件 \\( i \\) 是否在加工顺序的第 \\( j \\) 位。我们还定义了每个工件的完工时间 \\( C_i \\) 和延误时间 \\( L_i \\)。\n\n2. **目标函数**：\n   - 我们的目标是最小化所有工件的延误时间之和，即 \\( \\sum L_i \\)。\n\n3. **约束条件**：\n   - 每个工件必须有且仅有一个加工顺序位置。\n   - 每个加工顺序位置必须分配给一个工件。\n   - 完工时间 \\( C_i \\) 由加工顺序和加工时间决定。\n   - 延误时间 \\( L_i \\) 由完工时间和交货期决定。\n\n4. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义决策变量、目标函数和约束条件。\n   - 求解问题并提取结果，包括最优加工顺序、总延误和每个工件的完工时间。\n\n5. **结果输出**：\n   - 结果以 JSON 格式保存到 `result.json` 文件中，路径由环境变量 `RESULT_PATH` 指定。\n   - 输出包括总延误、加工顺序、可行性状态、完工时间和延误时间等信息。",
+  "raw_output": "===MODEL===\n\n定义变量：\n- \\( x_i \\): 工件 \\( i \\) 在加工顺序中的位置，\\( x_i \\in \\{1, 2, 3, 4\\} \\)。\n- \\( C_i \\): 工件 \\( i \\) 的完工时间。\n- \\( L_i \\): 工件 \\( i \\) 的延误时间，\\( L_i = \\max(0, C_i - d_i) \\)。\n\n参数：\n- \\( p_i \\): 工件 \\( i \\) 的加工时间，分别为 \\( p_1 = 3, p_2 = 1, p_3 = 2, p_4 = 4 \\)。\n- \\( d_i \\): 工件 \\( i \\) 的交货期，分别为 \\( d_1 = 4, d_2 = 2, d_3 = 6, d_4 = 8 \\)。\n\n目标：\n- 最小化总延误 \\( \\sum_{i=1}^4 L_i \\)。\n\n约束：\n1. 每个工件必须有且仅有一个加工顺序位置。\n2. 每个加工顺序位置必须分配给一个工件。\n3. 完工时间 \\( C_i \\) 由加工顺序和加工时间决定。\n4. 延误时间 \\( L_i \\) 由完工时间和交货期决定。\n\n===CODE===\n\n```python\nimport os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Parameters\nprocessing_times = [3, 1, 2, 4]\ndue_dates = [4, 2, 6, 8]\nnum_jobs = len(processing_times)\n\n# Problem definition\nprob = LpProblem(\"Minimize_Total_Delay\", LpMinimize)\n\n# Decision variables\nx = [[LpVariable(f\"x_{i}_{j}\", cat=LpBinary) for j in range(num_jobs)] for i in range(num_jobs)]\nC = [LpVariable(f\"C_{i}\", lowBound=0) for i in range(num_jobs)]\nL = [LpVariable(f\"L_{i}\", lowBound=0) for i in range(num_jobs)]\n\n# Objective function: Minimize total delay\nprob += lpSum(L)\n\n# Constraints\n# Each job is assigned to exactly one position\nfor i in range(num_jobs):\n    prob += lpSum(x[i][j] for j in range(num_jobs)) == 1\n\n# Each position is assigned to exactly one job\nfor j in range(num_jobs):\n    prob += lpSum(x[i][j] for i in range(num_jobs)) == 1\n\n# Completion time constraints\nfor i in range(num_jobs):\n    prob += C[i] == lpSum(processing_times[k] * x[k][j] for k in range(num_jobs) for j in range(i + 1))\n\n# Lateness constraints\nfor i in range(num_jobs):\n    prob += L[i] >= C[i] - due_dates[i]\n    prob += L[i] >= 0\n\n# Solve the problem\nprob.solve()\n\n# Extract results\nsolution = [j for i in range(num_jobs) for j in range(num_jobs) if x[i][j].varValue == 1]\ncompletion_times = [value(C[i]) for i in range(num_jobs)]\nlateness = [value(L[i]) for i in range(num_jobs)]\ntotal_delay = sum(lateness)\n\n# Output results\nresult = {\n    \"objective\": total_delay,\n    \"solution\": solution,\n    \"feasible\": prob.status == 1,\n    \"completion_times\": completion_times,\n    \"lateness\": lateness\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n\n1. **问题建模**：\n   - 我们需要安排4个工件的加工顺序，使得总延误最小。延误是指工件的完工时间超过其交货期的部分。\n   - 决策变量 \\( x_{i,j} \\) 表示工件 \\( i \\) 是否在加工顺序的第 \\( j \\) 位。我们还定义了每个工件的完工时间 \\( C_i \\) 和延误时间 \\( L_i \\)。\n\n2. **目标函数**：\n   - 我们的目标是最小化所有工件的延误时间之和，即 \\( \\sum L_i \\)。\n\n3. **约束条件**：\n   - 每个工件必须有且仅有一个加工顺序位置。\n   - 每个加工顺序位置必须分配给一个工件。\n   - 完工时间 \\( C_i \\) 由加工顺序和加工时间决定。\n   - 延误时间 \\( L_i \\) 由完工时间和交货期决定。\n\n4. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义决策变量、目标函数和约束条件。\n   - 求解问题并提取结果，包括最优加工顺序、总延误和每个工件的完工时间。\n\n5. **结果输出**：\n   - 结果以 JSON 格式保存到 `result.json` 文件中，路径由环境变量 `RESULT_PATH` 指定。\n   - 输出包括总延误、加工顺序、可行性状态、完工时间和延误时间等信息。",
+  "elapsed_s": 11.67,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/af2046b631734bd184592118f2270d81-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/af2046b631734bd184592118f2270d81-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 25 COLUMNS\nAt line 150 RHS\nAt line 171 BOUNDS\nAt line 188 ENDATA\nProblem MODEL has 20 rows, 24 columns and 88 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 3 - 0.00 seconds\nCgl0004I processed model has 12 rows, 20 columns (16 inte",
+  "stderr": "",
+  "result": {
+    "objective": 3.0,
+    "solution": [
+      2,
+      1,
+      0,
+      3
+    ],
+    "feasible": true,
+    "completion_times": [
+      2.0,
+      3.0,
+      6.0,
+      10.0
+    ],
+    "lateness": [
+      0.0,
+      1.0,
+      0.0,
+      2.0
+    ]
+  },
+  "objective": 3.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "feasible_suboptimal"
+}

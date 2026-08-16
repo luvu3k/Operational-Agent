@@ -1,0 +1,39 @@
+{
+  "system": "Moonshot-v1",
+  "model": "moonshot-v1-8k",
+  "case": "C03_assignment",
+  "nl": "有3个工人和3项任务，工人i完成任务j的成本矩阵为[[9,2,7],[6,4,3],[5,8,1]]（行是工人，列是任务）。每个工人恰好分配一项任务，每项任务恰好由一个工人完成。请给出总成本最小的分配方案和最小总成本。",
+  "math_model": "Let x_ij be a binary variable that equals 1 if worker i is assigned to task j, and 0 otherwise. The objective is to minimize the total cost:\n\nminimize: sum(i=1 to 3, j=1 to 3) cost_ij * x_ij\n\nSubject to:\n1. Each worker is assigned to exactly one task:\n   sum(j=1 to 3) x_ij = 1 for i = 1, 2, 3\n\n2. Each task is assigned to exactly one worker:\n   sum(i=1 to 3) x_ij = 1 for j = 1, 2, 3\n\n3. x_ij is binary:\n   x_ij ∈ {0, 1} for i = 1, 2, 3 and j = 1, 2, 3\n\nwhere cost_ij is the cost of worker i completing task j.",
+  "code": "import pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimize_Cost\", pulp.LpMinimize)\n\n# Define the variables\nx = pulp.LpVariable.dicts(\"x\", (range(3), range(3)), cat='Binary')\n\n# Define the cost matrix\ncost_matrix = [[9, 2, 7], [6, 4, 3], [5, 8, 1]]\n\n# Define the objective function\nproblem += pulp.lpSum([cost_matrix[i][j] * x[i][j] for i in range(3) for j in range(3)])\n\n# Define the constraints\nfor i in range(3):\n    problem += pulp.lpSum([x[i][j] for j in range(3)]) == 1\nfor j in range(3):\n    problem += pulp.lpSum([x[i][j] for i in range(3)]) == 1\n\n# Solve the problem\nproblem.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: {j: x[i][j].varValue for j in range(3)} for i in range(3)},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\nresult_path = os.environ.get('RESULT_PATH', 'result.json')\nwith open(result_path, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "这个问题是一个经典的分配问题，我们的目标是将三个工人分配到三个任务上，使得总成本最小。我们使用线性规划来解决这个问题。\n\n1. 我们首先定义了一个线性规划问题，目标是最小化总成本。\n2. 我们定义了一组二进制变量x_ij，如果工人i被分配到任务j，则x_ij为1，否则为0。\n3. 我们定义了成本矩阵，其中cost_ij是工人i完成任务j的成本。\n4. 我们定义了目标函数，即所有x_ij乘以其对应成本的总和。\n5. 我们添加了两个约束条件：每个工人只能被分配到一个任务，每个任务只能被一个工人完成。\n6. 我们使用PuLP库来解决这个问题，并得到最优解。\n7. 我们将结果写入一个JSON文件，包括目标函数值、解决方案和是否可行。",
+  "raw_output": "===MODEL===\nLet x_ij be a binary variable that equals 1 if worker i is assigned to task j, and 0 otherwise. The objective is to minimize the total cost:\n\nminimize: sum(i=1 to 3, j=1 to 3) cost_ij * x_ij\n\nSubject to:\n1. Each worker is assigned to exactly one task:\n   sum(j=1 to 3) x_ij = 1 for i = 1, 2, 3\n\n2. Each task is assigned to exactly one worker:\n   sum(i=1 to 3) x_ij = 1 for j = 1, 2, 3\n\n3. x_ij is binary:\n   x_ij ∈ {0, 1} for i = 1, 2, 3 and j = 1, 2, 3\n\nwhere cost_ij is the cost of worker i completing task j.\n\n===CODE===\n```python\nimport pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimize_Cost\", pulp.LpMinimize)\n\n# Define the variables\nx = pulp.LpVariable.dicts(\"x\", (range(3), range(3)), cat='Binary')\n\n# Define the cost matrix\ncost_matrix = [[9, 2, 7], [6, 4, 3], [5, 8, 1]]\n\n# Define the objective function\nproblem += pulp.lpSum([cost_matrix[i][j] * x[i][j] for i in range(3) for j in range(3)])\n\n# Define the constraints\nfor i in range(3):\n    problem += pulp.lpSum([x[i][j] for j in range(3)]) == 1\nfor j in range(3):\n    problem += pulp.lpSum([x[i][j] for i in range(3)]) == 1\n\n# Solve the problem\nproblem.solve()\n\n# Write the result to a JSON file\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: {j: x[i][j].varValue for j in range(3)} for i in range(3)},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\nresult_path = os.environ.get('RESULT_PATH', 'result.json')\nwith open(result_path, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n这个问题是一个经典的分配问题，我们的目标是将三个工人分配到三个任务上，使得总成本最小。我们使用线性规划来解决这个问题。\n\n1. 我们首先定义了一个线性规划问题，目标是最小化总成本。\n2. 我们定义了一组二进制变量x_ij，如果工人i被分配到任务j，则x_ij为1，否则为0。\n3. 我们定义了成本矩阵，其中cost_ij是工人i完成任务j的成本。\n4. 我们定义了目标函数，即所有x_ij乘以其对应成本的总和。\n5. 我们添加了两个约束条件：每个工人只能被分配到一个任务，每个任务只能被一个工人完成。\n6. 我们使用PuLP库来解决这个问题，并得到最优解。\n7. 我们将结果写入一个JSON文件，包括目标函数值、解决方案和是否可行。",
+  "elapsed_s": 10.74,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/19c35240debc4dd89d3d8038717dadfe-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/19c35240debc4dd89d3d8038717dadfe-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 11 COLUMNS\nAt line 57 RHS\nAt line 64 BOUNDS\nAt line 74 ENDATA\nProblem MODEL has 6 rows, 9 columns and 18 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 9 - 0.00 seconds\nCgl0004I processed model has 6 rows, 9 columns (9 integer (9 o",
+  "stderr": "",
+  "result": {
+    "objective": 9.0,
+    "solution": {
+      "0": {
+        "0": 0.0,
+        "1": 1.0,
+        "2": 0.0
+      },
+      "1": {
+        "0": 1.0,
+        "1": 0.0,
+        "2": 0.0
+      },
+      "2": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 1.0
+      }
+    },
+    "feasible": true
+  },
+  "objective": 9.0,
+  "ground_truth": 9,
+  "runnable": true,
+  "verdict": "optimal"
+}

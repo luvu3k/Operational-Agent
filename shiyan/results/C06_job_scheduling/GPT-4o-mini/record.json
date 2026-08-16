@@ -1,0 +1,28 @@
+{
+  "system": "GPT-4o-mini",
+  "model": "gpt-4o-mini",
+  "case": "C06_job_scheduling",
+  "nl": "一台机器要加工4个工件，加工时间分别是3、1、2、4，交货期分别是4、2、6、8。工件顺序加工不可中断。请安排加工顺序，使总延误（每个工件完工时间超过交货期的部分之和）最小，并给出最小总延误和加工顺序。",
+  "math_model": "设工件的加工时间为 \\( t_1, t_2, t_3, t_4 \\) 分别为 3, 1, 2, 4，交货期为 \\( d_1, d_2, d_3, d_4 \\) 分别为 4, 2, 6, 8。我们需要确定一个工件的加工顺序 \\( (p_1, p_2, p_3, p_4) \\)，使得总延误最小。\n\n定义完工时间 \\( C_i \\) 为：\n\\[ C_i = \\sum_{j=1}^{i} t_{p_j} \\]\n\n延误 \\( L_i \\) 为：\n\\[ L_i = \\max(0, C_i - d_{p_i}) \\]\n\n总延误为：\n\\[ L = \\sum_{i=1}^{4} L_i \\]\n\n目标是最小化总延误 \\( L \\)。",
+  "code": "import itertools\nimport json\nimport os\n\n# 工件加工时间和交货期\nprocessing_times = [3, 1, 2, 4]\ndue_dates = [4, 2, 6, 8]\n\n# 计算总延误\ndef calculate_total_delay(order):\n    completion_times = []\n    total_delay = 0\n    current_time = 0\n    \n    for i in order:\n        current_time += processing_times[i]\n        completion_times.append(current_time)\n        delay = max(0, current_time - due_dates[i])\n        total_delay += delay\n    \n    return total_delay, completion_times\n\n# 所有可能的工件顺序\norders = list(itertools.permutations(range(4)))\nmin_delay = float('inf')\nbest_order = None\nbest_completion_times = None\n\n# 遍历所有工件顺序，寻找最小总延误\nfor order in orders:\n    total_delay, completion_times = calculate_total_delay(order)\n    if total_delay < min_delay:\n        min_delay = total_delay\n        best_order = order\n        best_completion_times = completion_times\n\n# 结果写入 JSON 文件\nresult = {\n    \"objective\": min_delay,\n    \"solution\": list(best_order),\n    \"feasible\": True\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：我们有四个工件，每个工件有特定的加工时间和交货期。我们的目标是安排这些工件的加工顺序，以最小化总延误，即所有工件完工时间超过交货期的部分之和。\n\n2. **模型构建**：我们定义了完工时间和延误的计算方式。完工时间是当前时间加上加工时间，延误是完工时间超过交货期的部分。我们需要计算所有可能的工件顺序，并找出使总延误最小的顺序。\n\n3. **代码实现**：我们使用 `itertools.permutations` 生成所有工件的排列组合，计算每种顺序的总延误，并记录下最小的延误和对应的顺序。最后，将结果写入一个 JSON 文件中，文件路径由环境变量 `RESULT_PATH` 指定。",
+  "raw_output": "===MODEL===\n设工件的加工时间为 \\( t_1, t_2, t_3, t_4 \\) 分别为 3, 1, 2, 4，交货期为 \\( d_1, d_2, d_3, d_4 \\) 分别为 4, 2, 6, 8。我们需要确定一个工件的加工顺序 \\( (p_1, p_2, p_3, p_4) \\)，使得总延误最小。\n\n定义完工时间 \\( C_i \\) 为：\n\\[ C_i = \\sum_{j=1}^{i} t_{p_j} \\]\n\n延误 \\( L_i \\) 为：\n\\[ L_i = \\max(0, C_i - d_{p_i}) \\]\n\n总延误为：\n\\[ L = \\sum_{i=1}^{4} L_i \\]\n\n目标是最小化总延误 \\( L \\)。\n\n===CODE===\n```python\nimport itertools\nimport json\nimport os\n\n# 工件加工时间和交货期\nprocessing_times = [3, 1, 2, 4]\ndue_dates = [4, 2, 6, 8]\n\n# 计算总延误\ndef calculate_total_delay(order):\n    completion_times = []\n    total_delay = 0\n    current_time = 0\n    \n    for i in order:\n        current_time += processing_times[i]\n        completion_times.append(current_time)\n        delay = max(0, current_time - due_dates[i])\n        total_delay += delay\n    \n    return total_delay, completion_times\n\n# 所有可能的工件顺序\norders = list(itertools.permutations(range(4)))\nmin_delay = float('inf')\nbest_order = None\nbest_completion_times = None\n\n# 遍历所有工件顺序，寻找最小总延误\nfor order in orders:\n    total_delay, completion_times = calculate_total_delay(order)\n    if total_delay < min_delay:\n        min_delay = total_delay\n        best_order = order\n        best_completion_times = completion_times\n\n# 结果写入 JSON 文件\nresult = {\n    \"objective\": min_delay,\n    \"solution\": list(best_order),\n    \"feasible\": True\n}\n\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. **问题描述**：我们有四个工件，每个工件有特定的加工时间和交货期。我们的目标是安排这些工件的加工顺序，以最小化总延误，即所有工件完工时间超过交货期的部分之和。\n\n2. **模型构建**：我们定义了完工时间和延误的计算方式。完工时间是当前时间加上加工时间，延误是完工时间超过交货期的部分。我们需要计算所有可能的工件顺序，并找出使总延误最小的顺序。\n\n3. **代码实现**：我们使用 `itertools.permutations` 生成所有工件的排列组合，计算每种顺序的总延误，并记录下最小的延误和对应的顺序。最后，将结果写入一个 JSON 文件中，文件路径由环境变量 `RESULT_PATH` 指定。",
+  "elapsed_s": 6.48,
+  "returncode": 0,
+  "stdout": "",
+  "stderr": "",
+  "result": {
+    "objective": 2,
+    "solution": [
+      1,
+      0,
+      2,
+      3
+    ],
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

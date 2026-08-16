@@ -1,0 +1,106 @@
+{
+  "description": "10 个经典组合优化案例，覆盖不同难度与场景。每个案例含自然语言描述、类型、难度、以及可验证的参考最优值(ground truth)用于评分建模准确性。",
+  "cases": [
+    {
+      "id": "C01_knapsack",
+      "name": "0/1 背包问题",
+      "type": "knapsack",
+      "difficulty": "easy",
+      "nl": "有5件物品，重量分别是2、3、4、5、9，价值分别是3、4、5、8、10，背包最大承重是20，每件物品最多选一次。请问如何选择物品使装入背包的总价值最大？给出最大总价值和所选物品。",
+      "ground_truth_objective": 26,
+      "sense": "max",
+      "verify": "brute_force_knapsack"
+    },
+    {
+      "id": "C02_tsp",
+      "name": "旅行商问题(TSP)",
+      "type": "tsp",
+      "difficulty": "medium",
+      "nl": "一个销售员要访问5个城市，坐标分别是A(0,0)、B(0,4)、C(4,4)、D(4,0)、E(2,2)，从A出发访问每个城市恰好一次最后回到A。城市间距离为欧氏距离。请给出总距离最短的巡回路线和最短总距离。",
+      "ground_truth_objective": 17.6569,
+      "sense": "min",
+      "verify": "brute_force_tsp",
+      "tol": 0.01
+    },
+    {
+      "id": "C03_assignment",
+      "name": "指派问题",
+      "type": "assignment",
+      "difficulty": "easy",
+      "nl": "有3个工人和3项任务，工人i完成任务j的成本矩阵为[[9,2,7],[6,4,3],[5,8,1]]（行是工人，列是任务）。每个工人恰好分配一项任务，每项任务恰好由一个工人完成。请给出总成本最小的分配方案和最小总成本。",
+      "ground_truth_objective": 9,
+      "sense": "min",
+      "verify": "brute_force_assignment"
+    },
+    {
+      "id": "C04_bin_packing",
+      "name": "装箱问题",
+      "type": "bin_packing",
+      "difficulty": "medium",
+      "nl": "有物品体积分别为4、8、1、4、2、1，箱子容量为10。请用最少的箱子把所有物品装完，每个箱子里物品体积之和不超过10。给出所需最少箱子数和装箱方案。",
+      "ground_truth_objective": 2,
+      "sense": "min",
+      "verify": "manual"
+    },
+    {
+      "id": "C05_set_cover",
+      "name": "集合覆盖问题",
+      "type": "set_cover",
+      "difficulty": "medium",
+      "nl": "全集是{1,2,3,4,5}。有4个子集：S1={1,2,3}，S2={2,4}，S3={3,4}，S4={4,5}。请选择数量最少的子集，使它们的并集覆盖全集。给出最少子集数量和选择方案。",
+      "ground_truth_objective": 2,
+      "sense": "min",
+      "verify": "manual"
+    },
+    {
+      "id": "C06_job_scheduling",
+      "name": "单机调度(最小化最大完工时间/最小化总延误)",
+      "type": "scheduling",
+      "difficulty": "medium",
+      "nl": "一台机器要加工4个工件，加工时间分别是3、1、2、4，交货期分别是4、2、6、8。工件顺序加工不可中断。请安排加工顺序，使总延误（每个工件完工时间超过交货期的部分之和）最小，并给出最小总延误和加工顺序。",
+      "ground_truth_objective": 2,
+      "sense": "min",
+      "verify": "brute_force_schedule"
+    },
+    {
+      "id": "C07_cvrp",
+      "name": "带容量约束车辆路径问题(CVRP)",
+      "type": "vrp",
+      "difficulty": "hard",
+      "nl": "一个配送中心(坐标0,0)有若干辆容量为10的车。有4个客户，坐标和需求分别是：C1(2,3)需求5，C2(5,4)需求4，C3(-3,5)需求3，C4(-4,-2)需求6。每辆车从配送中心出发服务若干客户后返回，车上装载不超过容量。距离为欧氏距离。请给出满足所有需求、总行驶距离尽量小的路线方案与总距离。",
+      "ground_truth_objective": null,
+      "sense": "min",
+      "verify": "feasibility_only"
+    },
+    {
+      "id": "C08_graph_coloring",
+      "name": "图着色问题",
+      "type": "graph_coloring",
+      "difficulty": "medium",
+      "nl": "一个无向图有5个顶点，边为：1-2、1-3、2-3、3-4、4-5、2-5。请用最少的颜色给顶点着色，使相邻顶点颜色不同。给出最少颜色数和一种着色方案。",
+      "ground_truth_objective": 3,
+      "sense": "min",
+      "verify": "manual"
+    },
+    {
+      "id": "C09_max_flow",
+      "name": "最大流问题",
+      "type": "max_flow",
+      "difficulty": "medium",
+      "nl": "一个有向网络，源点s、汇点t。边容量：s->a=10，s->b=5，a->b=15，a->t=10，b->t=10。请求从s到t的最大流量，并给出各边的流量分配。",
+      "ground_truth_objective": 15,
+      "sense": "max",
+      "verify": "manual"
+    },
+    {
+      "id": "C10_facility_location",
+      "name": "无容量设施选址问题(UFLP)",
+      "type": "facility_location",
+      "difficulty": "hard",
+      "nl": "有3个候选设施点，开设成本分别是4、3、5。有4个客户，每个客户必须由一个已开设的设施服务。设施i服务客户j的成本矩阵为[[2,3,1,4],[5,4,2,1],[3,2,4,2]]（行是设施，列是客户）。请决定开设哪些设施、每个客户由谁服务，使总成本（开设成本+服务成本）最小。给出最小总成本与方案。",
+      "ground_truth_objective": 14,
+      "sense": "min",
+      "verify": "brute_force_uflp"
+    }
+  ]
+}

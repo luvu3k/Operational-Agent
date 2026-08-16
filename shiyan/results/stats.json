@@ -1,0 +1,44 @@
+{
+  "OptAgent": {
+    "n": 10,
+    "runnable": 10,
+    "optimal": 7,
+    "invalid": 2,
+    "e2e": 7
+  },
+  "GPT-4o": {
+    "n": 10,
+    "runnable": 10,
+    "optimal": 8,
+    "invalid": 1,
+    "e2e": 8
+  },
+  "GPT-4o-mini": {
+    "n": 10,
+    "runnable": 10,
+    "optimal": 6,
+    "invalid": 4,
+    "e2e": 6
+  },
+  "Moonshot-v1": {
+    "n": 10,
+    "runnable": 5,
+    "optimal": 4,
+    "invalid": 1,
+    "e2e": 4
+  },
+  "Qwen2.5-72B": {
+    "n": 10,
+    "runnable": 2,
+    "optimal": 2,
+    "invalid": 0,
+    "e2e": 2
+  },
+  "DeepSeek-V3-raw": {
+    "n": 10,
+    "runnable": 9,
+    "optimal": 7,
+    "invalid": 2,
+    "e2e": 7
+  }
+}

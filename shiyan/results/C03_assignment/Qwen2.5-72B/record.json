@@ -1,0 +1,19 @@
+{
+  "system": "Qwen2.5-72B",
+  "model": "Qwen/Qwen2.5-72B-Instruct",
+  "case": "C03_assignment",
+  "nl": "有3个工人和3项任务，工人i完成任务j的成本矩阵为[[9,2,7],[6,4,3],[5,8,1]]（行是工人，列是任务）。每个工人恰好分配一项任务，每项任务恰好由一个工人完成。请给出总成本最小的分配方案和最小总成本。",
+  "math_model": "",
+  "code": "",
+  "explanation": "",
+  "raw_output": "",
+  "elapsed_s": 182.11,
+  "returncode": -1,
+  "stdout": "",
+  "stderr": "APITimeoutError: Request timed out.",
+  "result": {},
+  "objective": null,
+  "ground_truth": 9,
+  "runnable": false,
+  "verdict": "no_result"
+}

@@ -1,0 +1,34 @@
+{
+  "system": "GPT-4o",
+  "model": "gpt-4o",
+  "case": "C04_bin_packing",
+  "nl": "有物品体积分别为4、8、1、4、2、1，箱子容量为10。请用最少的箱子把所有物品装完，每个箱子里物品体积之和不超过10。给出所需最少箱子数和装箱方案。",
+  "math_model": "数学模型如下：\n\n目标：最小化使用的箱子数量。\n\n变量：\n- \\( x_{ij} \\): 二元变量，表示物品 \\( i \\) 是否放入箱子 \\( j \\)。\\( x_{ij} = 1 \\) 表示物品 \\( i \\) 放入箱子 \\( j \\)，否则为 0。\n- \\( y_j \\): 二元变量，表示箱子 \\( j \\) 是否被使用。\\( y_j = 1 \\) 表示箱子 \\( j \\) 被使用，否则为 0。\n\n约束条件：\n1. 每个物品必须且只能放入一个箱子：\n   \\[\n   \\sum_{j} x_{ij} = 1, \\quad \\forall i\n   \\]\n2. 每个箱子的总体积不能超过容量：\n   \\[\n   \\sum_{i} v_i \\cdot x_{ij} \\leq C \\cdot y_j, \\quad \\forall j\n   \\]\n   其中 \\( v_i \\) 是物品 \\( i \\) 的体积，\\( C \\) 是箱子容量。\n3. \\( x_{ij} \\) 和 \\( y_j \\) 是二元变量。\n\n目标函数：\n\\[\n\\min \\sum_{j} y_j\n\\]",
+  "code": "import os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Data\nvolumes = [4, 8, 1, 4, 2, 1]\ncapacity = 10\nnum_items = len(volumes)\nnum_bins = num_items  # Worst case: each item in its own bin\n\n# Problem\nproblem = LpProblem(\"Bin_Packing_Problem\", LpMinimize)\n\n# Variables\nx = [[LpVariable(f\"x_{i}_{j}\", cat=LpBinary) for j in range(num_bins)] for i in range(num_items)]\ny = [LpVariable(f\"y_{j}\", cat=LpBinary) for j in range(num_bins)]\n\n# Objective: Minimize the number of bins used\nproblem += lpSum(y)\n\n# Constraints\n# Each item must be in exactly one bin\nfor i in range(num_items):\n    problem += lpSum(x[i][j] for j in range(num_bins)) == 1\n\n# Bin capacity constraints\nfor j in range(num_bins):\n    problem += lpSum(volumes[i] * x[i][j] for i in range(num_items)) <= capacity * y[j]\n\n# Solve\nproblem.solve()\n\n# Extract results\nsolution = {\n    \"objective\": value(problem.objective),\n    \"solution\": [],\n    \"feasible\": problem.status == 1\n}\n\nif solution[\"feasible\"]:\n    for j in range(num_bins):\n        bin_items = [i for i in range(num_items) if x[i][j].varValue == 1]\n        if bin_items:\n            solution[\"solution\"].append(bin_items)\n\n# Write results to JSON\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(solution, f)",
+  "explanation": "1. **问题描述**：我们需要将体积为 `[4, 8, 1, 4, 2, 1]` 的物品装入容量为 10 的箱子中，目标是使用最少的箱子。每个箱子的物品体积之和不能超过 10。\n\n2. **数学建模**：我们定义了两个变量：\n   - \\( x_{ij} \\)：表示物品 \\( i \\) 是否放入箱子 \\( j \\)。\n   - \\( y_j \\)：表示箱子 \\( j \\) 是否被使用。\n   目标是最小化 \\( y_j \\) 的总和，同时满足每个物品必须放入一个箱子，以及每个箱子的体积限制。\n\n3. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义变量 \\( x_{ij} \\) 和 \\( y_j \\)。\n   - 添加约束：每个物品必须放入一个箱子，以及箱子的体积限制。\n   - 定义目标函数：最小化使用的箱子数量。\n   - 求解问题并提取结果。\n\n4. **结果输出**：代码将结果写入 `result.json` 文件，包含以下内容：\n   - `objective`：最少需要的箱子数量。\n   - `solution`：每个箱子中装的物品编号。\n   - `feasible`：问题是否有解。\n\n通过运行代码，可以得到最优装箱方案和所需的最少箱子数量。",
+  "raw_output": "===MODEL===\n\n数学模型如下：\n\n目标：最小化使用的箱子数量。\n\n变量：\n- \\( x_{ij} \\): 二元变量，表示物品 \\( i \\) 是否放入箱子 \\( j \\)。\\( x_{ij} = 1 \\) 表示物品 \\( i \\) 放入箱子 \\( j \\)，否则为 0。\n- \\( y_j \\): 二元变量，表示箱子 \\( j \\) 是否被使用。\\( y_j = 1 \\) 表示箱子 \\( j \\) 被使用，否则为 0。\n\n约束条件：\n1. 每个物品必须且只能放入一个箱子：\n   \\[\n   \\sum_{j} x_{ij} = 1, \\quad \\forall i\n   \\]\n2. 每个箱子的总体积不能超过容量：\n   \\[\n   \\sum_{i} v_i \\cdot x_{ij} \\leq C \\cdot y_j, \\quad \\forall j\n   \\]\n   其中 \\( v_i \\) 是物品 \\( i \\) 的体积，\\( C \\) 是箱子容量。\n3. \\( x_{ij} \\) 和 \\( y_j \\) 是二元变量。\n\n目标函数：\n\\[\n\\min \\sum_{j} y_j\n\\]\n\n===CODE===\n\n```python\nimport os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Data\nvolumes = [4, 8, 1, 4, 2, 1]\ncapacity = 10\nnum_items = len(volumes)\nnum_bins = num_items  # Worst case: each item in its own bin\n\n# Problem\nproblem = LpProblem(\"Bin_Packing_Problem\", LpMinimize)\n\n# Variables\nx = [[LpVariable(f\"x_{i}_{j}\", cat=LpBinary) for j in range(num_bins)] for i in range(num_items)]\ny = [LpVariable(f\"y_{j}\", cat=LpBinary) for j in range(num_bins)]\n\n# Objective: Minimize the number of bins used\nproblem += lpSum(y)\n\n# Constraints\n# Each item must be in exactly one bin\nfor i in range(num_items):\n    problem += lpSum(x[i][j] for j in range(num_bins)) == 1\n\n# Bin capacity constraints\nfor j in range(num_bins):\n    problem += lpSum(volumes[i] * x[i][j] for i in range(num_items)) <= capacity * y[j]\n\n# Solve\nproblem.solve()\n\n# Extract results\nsolution = {\n    \"objective\": value(problem.objective),\n    \"solution\": [],\n    \"feasible\": problem.status == 1\n}\n\nif solution[\"feasible\"]:\n    for j in range(num_bins):\n        bin_items = [i for i in range(num_items) if x[i][j].varValue == 1]\n        if bin_items:\n            solution[\"solution\"].append(bin_items)\n\n# Write results to JSON\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(solution, f)\n```\n\n===EXPLANATION===\n\n1. **问题描述**：我们需要将体积为 `[4, 8, 1, 4, 2, 1]` 的物品装入容量为 10 的箱子中，目标是使用最少的箱子。每个箱子的物品体积之和不能超过 10。\n\n2. **数学建模**：我们定义了两个变量：\n   - \\( x_{ij} \\)：表示物品 \\( i \\) 是否放入箱子 \\( j \\)。\n   - \\( y_j \\)：表示箱子 \\( j \\) 是否被使用。\n   目标是最小化 \\( y_j \\) 的总和，同时满足每个物品必须放入一个箱子，以及每个箱子的体积限制。\n\n3. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义变量 \\( x_{ij} \\) 和 \\( y_j \\)。\n   - 添加约束：每个物品必须放入一个箱子，以及箱子的体积限制。\n   - 定义目标函数：最小化使用的箱子数量。\n   - 求解问题并提取结果。\n\n4. **结果输出**：代码将结果写入 `result.json` 文件，包含以下内容：\n   - `objective`：最少需要的箱子数量。\n   - `solution`：每个箱子中装的物品编号。\n   - `feasible`：问题是否有解。\n\n通过运行代码，可以得到最优装箱方案和所需的最少箱子数量。",
+  "elapsed_s": 9.62,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/634083c8299647bf83ed98413ddf6a70-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/634083c8299647bf83ed98413ddf6a70-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 17 COLUMNS\nAt line 186 RHS\nAt line 199 BOUNDS\nAt line 242 ENDATA\nProblem MODEL has 12 rows, 42 columns and 78 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 2 - 0.00 seconds\nCgl0004I processed model has 12 rows, 42 columns (42 inte",
+  "stderr": "",
+  "result": {
+    "objective": 2.0,
+    "solution": [
+      [
+        0,
+        2,
+        3,
+        5
+      ],
+      [
+        1,
+        4
+      ]
+    ],
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

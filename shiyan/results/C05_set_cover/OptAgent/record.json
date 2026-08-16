@@ -1,0 +1,26 @@
+{
+  "system": "OptAgent",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C05_set_cover",
+  "nl": "全集是{1,2,3,4,5}。有4个子集：S1={1,2,3}，S2={2,4}，S3={3,4}，S4={4,5}。请选择数量最少的子集，使它们的并集覆盖全集。给出最少子集数量和选择方案。",
+  "math_model": "决策变量: \n- x_i ∈ {0,1} 表示是否选择子集 S_i (i=1,2,3,4)\n\n目标函数:\nminimize ∑x_i\n\n约束:\n- 每个元素至少被一个选中的子集覆盖:\n  x1 ≥ 1 (覆盖元素1)\n  x1 + x2 ≥ 1 (覆盖元素2)\n  x1 + x3 ≥ 1 (覆盖元素3)\n  x2 + x3 + x4 ≥ 1 (覆盖元素4)\n  x4 ≥ 1 (覆盖元素5)",
+  "code": "import os as _os\n_os.environ.setdefault('RESULT_PATH', '/Applications/yhy/Operational_Agent/artifacts/runs/set_cover_20260816_general_llm_153434/result.json')\nimport pulp\nimport os\nimport json\n\n# 定义全集和子集\nuniverse = {1, 2, 3, 4, 5}\nsubsets = {\n    'S1': {1, 2, 3},\n    'S2': {2, 4},\n    'S3': {3, 4},\n    'S4': {4, 5}\n}\n\n# 创建问题实例\nprob = pulp.LpProblem(\"Set_Covering\", pulp.LpMinimize)\n\n# 创建决策变量\nx = {s: pulp.LpVariable(s, cat='Binary') for s in subsets}\n\n# 设置目标函数\nprob += pulp.lpSum(x.values())\n\n# 添加覆盖约束\nfor element in universe:\n    covering_sets = [s for s in subsets if element in subsets[s]]\n    prob += pulp.lpSum(x[s] for s in covering_sets) >= 1\n\n# 求解问题\nprob.solve()\n\n# 收集结果\nsolution = {s: int(pulp.value(x[s])) for s in subsets}\nselected_sets = [s for s in subsets if solution[s] == 1]\nobjective = int(pulp.value(prob.objective))\n\n# 输出结果\nprint(f\"最少需要子集数量: {objective}\")\nprint(f\"选择的子集: {selected_sets}\")\n\n# 保存结果到JSON\nresult = {\n    \"objective\": objective,\n    \"solution\": selected_sets,\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. 问题描述：我们需要从4个子集中选出最少数量的子集，使它们的并集能覆盖全集{1,2,3,4,5}的所有元素。\n\n2. 建模思路：\n   - 为每个子集创建一个0-1变量，表示是否选择该子集\n   - 目标是最小化被选子集的总数\n   - 约束确保每个元素至少被一个选中的子集包含\n\n3. 求解方法：\n   - 使用线性规划库PuLP求解这个0-1整数规划问题\n   - 通过二进制变量表示选择/不选择每个子集\n   - 添加约束确保每个元素至少被一个选中的子集覆盖\n\n4. 结果解读：\n   - 程序输出最少需要2个子集就能覆盖全集\n   - 可能的解是选择S1和S4（覆盖所有元素1-5）\n   - 这是最优解，因为无法用1个子集覆盖所有5个元素\n\n5. 实际应用：这类集合覆盖问题广泛应用于资源分配、设施选址、排班调度等场景，目标是使用最少资源满足所有需求。",
+  "raw_output": "===MODEL===\n决策变量: \n- x_i ∈ {0,1} 表示是否选择子集 S_i (i=1,2,3,4)\n\n目标函数:\nminimize ∑x_i\n\n约束:\n- 每个元素至少被一个选中的子集覆盖:\n  x1 ≥ 1 (覆盖元素1)\n  x1 + x2 ≥ 1 (覆盖元素2)\n  x1 + x3 ≥ 1 (覆盖元素3)\n  x2 + x3 + x4 ≥ 1 (覆盖元素4)\n  x4 ≥ 1 (覆盖元素5)\n\n===CODE===\n```python\nimport pulp\nimport os\nimport json\n\n# 定义全集和子集\nuniverse = {1, 2, 3, 4, 5}\nsubsets = {\n    'S1': {1, 2, 3},\n    'S2': {2, 4},\n    'S3': {3, 4},\n    'S4': {4, 5}\n}\n\n# 创建问题实例\nprob = pulp.LpProblem(\"Set_Covering\", pulp.LpMinimize)\n\n# 创建决策变量\nx = {s: pulp.LpVariable(s, cat='Binary') for s in subsets}\n\n# 设置目标函数\nprob += pulp.lpSum(x.values())\n\n# 添加覆盖约束\nfor element in universe:\n    covering_sets = [s for s in subsets if element in subsets[s]]\n    prob += pulp.lpSum(x[s] for s in covering_sets) >= 1\n\n# 求解问题\nprob.solve()\n\n# 收集结果\nsolution = {s: int(pulp.value(x[s])) for s in subsets}\nselected_sets = [s for s in subsets if solution[s] == 1]\nobjective = int(pulp.value(prob.objective))\n\n# 输出结果\nprint(f\"最少需要子集数量: {objective}\")\nprint(f\"选择的子集: {selected_sets}\")\n\n# 保存结果到JSON\nresult = {\n    \"objective\": objective,\n    \"solution\": selected_sets,\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. 问题描述：我们需要从4个子集中选出最少数量的子集，使它们的并集能覆盖全集{1,2,3,4,5}的所有元素。\n\n2. 建模思路：\n   - 为每个子集创建一个0-1变量，表示是否选择该子集\n   - 目标是最小化被选子集的总数\n   - 约束确保每个元素至少被一个选中的子集包含\n\n3. 求解方法：\n   - 使用线性规划库PuLP求解这个0-1整数规划问题\n   - 通过二进制变量表示选择/不选择每个子集\n   - 添加约束确保每个元素至少被一个选中的子集覆盖\n\n4. 结果解读：\n   - 程序输出最少需要2个子集就能覆盖全集\n   - 可能的解是选择S1和S4（覆盖所有元素1-5）\n   - 这是最优解，因为无法用1个子集覆盖所有5个元素\n\n5. 实际应用：这类集合覆盖问题广泛应用于资源分配、设施选址、排班调度等场景，目标是使用最少资源满足所有需求。",
+  "elapsed_s": 25.68,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/c32f0604a2c44c828f66f46f730e456b-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/c32f0604a2c44c828f66f46f730e456b-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 10 COL",
+  "stderr": "",
+  "result": {
+    "objective": 2,
+    "solution": [
+      "S1",
+      "S4"
+    ],
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

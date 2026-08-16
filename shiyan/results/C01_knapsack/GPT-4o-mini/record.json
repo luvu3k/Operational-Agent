@@ -1,0 +1,29 @@
+{
+  "system": "GPT-4o-mini",
+  "model": "gpt-4o-mini",
+  "case": "C01_knapsack",
+  "nl": "有5件物品，重量分别是2、3、4、5、9，价值分别是3、4、5、8、10，背包最大承重是20，每件物品最多选一次。请问如何选择物品使装入背包的总价值最大？给出最大总价值和所选物品。",
+  "math_model": "设物品集合为 \\( \\{1, 2, 3, 4, 5\\} \\)，其中每个物品 \\( i \\) 的重量为 \\( w_i \\) 和价值为 \\( v_i \\)。定义决策变量 \\( x_i \\) 为物品 \\( i \\) 是否被选中（1 表示选中，0 表示不选中）。目标是最大化总价值，同时满足背包的承重限制。\n\n目标函数：\n\\[\n\\text{Maximize } Z = 3x_1 + 4x_2 + 5x_3 + 8x_4 + 10x_5\n\\]\n\n约束条件：\n\\[\n2x_1 + 3x_2 + 4x_3 + 5x_4 + 9x_5 \\leq 20\n\\]\n\\[\nx_i \\in \\{0, 1\\}, \\quad \\forall i \\in \\{1, 2, 3, 4, 5\\}\n\\]",
+  "code": "import json\nfrom pulp import LpProblem, LpMaximize, LpVariable, lpSum, LpStatus\n\n# 创建问题\nproblem = LpProblem(\"Knapsack_Problem\", LpMaximize)\n\n# 定义物品的重量和价值\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nn = len(weights)\n\n# 定义决策变量\nx = [LpVariable(f'x{i}', cat='Binary') for i in range(n)]\n\n# 目标函数\nproblem += lpSum(values[i] * x[i] for i in range(n)), \"Total_Value\"\n\n# 约束条件\nproblem += lpSum(weights[i] * x[i] for i in range(n)) <= 20, \"Weight_Constraint\"\n\n# 求解问题\nproblem.solve()\n\n# 获取结果\nsolution = [int(x[i].varValue) for i in range(n)]\nobjective = problem.objective.value()\nfeasible = LpStatus[problem.status] == 'Optimal'\n\n# 将结果写入 JSON 文件\nresult = {\n    \"objective\": objective,\n    \"solution\": solution,\n    \"feasible\": feasible\n}\n\nimport os\nRESULT_PATH = os.getenv('RESULT_PATH', 'result.json')\nwith open(RESULT_PATH, 'w') as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题定义**：我们有5件物品，每件物品都有特定的重量和价值。我们的目标是选择一些物品放入背包，使得它们的总价值最大，同时不超过背包的最大承重20。\n\n2. **数学模型**：我们使用一个线性规划模型来描述这个问题。我们定义了一个目标函数，表示我们希望最大化的总价值，并且添加了一个约束条件，确保所选物品的总重量不超过20。每件物品只能选择一次，因此我们使用二进制变量来表示每件物品是否被选中。\n\n3. **代码实现**：我们使用 Python 的 PuLP 库来构建和求解这个线性规划问题。代码中定义了物品的重量和价值，设置了目标函数和约束条件，最后求解问题并将结果（最大总价值、所选物品和可行性）写入一个 JSON 文件中。",
+  "raw_output": "===MODEL===\n设物品集合为 \\( \\{1, 2, 3, 4, 5\\} \\)，其中每个物品 \\( i \\) 的重量为 \\( w_i \\) 和价值为 \\( v_i \\)。定义决策变量 \\( x_i \\) 为物品 \\( i \\) 是否被选中（1 表示选中，0 表示不选中）。目标是最大化总价值，同时满足背包的承重限制。\n\n目标函数：\n\\[\n\\text{Maximize } Z = 3x_1 + 4x_2 + 5x_3 + 8x_4 + 10x_5\n\\]\n\n约束条件：\n\\[\n2x_1 + 3x_2 + 4x_3 + 5x_4 + 9x_5 \\leq 20\n\\]\n\\[\nx_i \\in \\{0, 1\\}, \\quad \\forall i \\in \\{1, 2, 3, 4, 5\\}\n\\]\n\n===CODE===\n```python\nimport json\nfrom pulp import LpProblem, LpMaximize, LpVariable, lpSum, LpStatus\n\n# 创建问题\nproblem = LpProblem(\"Knapsack_Problem\", LpMaximize)\n\n# 定义物品的重量和价值\nweights = [2, 3, 4, 5, 9]\nvalues = [3, 4, 5, 8, 10]\nn = len(weights)\n\n# 定义决策变量\nx = [LpVariable(f'x{i}', cat='Binary') for i in range(n)]\n\n# 目标函数\nproblem += lpSum(values[i] * x[i] for i in range(n)), \"Total_Value\"\n\n# 约束条件\nproblem += lpSum(weights[i] * x[i] for i in range(n)) <= 20, \"Weight_Constraint\"\n\n# 求解问题\nproblem.solve()\n\n# 获取结果\nsolution = [int(x[i].varValue) for i in range(n)]\nobjective = problem.objective.value()\nfeasible = LpStatus[problem.status] == 'Optimal'\n\n# 将结果写入 JSON 文件\nresult = {\n    \"objective\": objective,\n    \"solution\": solution,\n    \"feasible\": feasible\n}\n\nimport os\nRESULT_PATH = os.getenv('RESULT_PATH', 'result.json')\nwith open(RESULT_PATH, 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n1. **问题定义**：我们有5件物品，每件物品都有特定的重量和价值。我们的目标是选择一些物品放入背包，使得它们的总价值最大，同时不超过背包的最大承重20。\n\n2. **数学模型**：我们使用一个线性规划模型来描述这个问题。我们定义了一个目标函数，表示我们希望最大化的总价值，并且添加了一个约束条件，确保所选物品的总重量不超过20。每件物品只能选择一次，因此我们使用二进制变量来表示每件物品是否被选中。\n\n3. **代码实现**：我们使用 Python 的 PuLP 库来构建和求解这个线性规划问题。代码中定义了物品的重量和价值，设置了目标函数和约束条件，最后求解问题并将结果（最大总价值、所选物品和可行性）写入一个 JSON 文件中。",
+  "elapsed_s": 6.41,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/855ccfb07caf4f92ac959d3ef4fc2c54-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/855ccfb07caf4f92ac959d3ef4fc2c54-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 6 COLUMNS\nAt line 27 RHS\nAt line 29 BOUNDS\nAt line 35 ENDATA\nProblem MODEL has 1 rows, 5 columns and 5 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 26.6667 - 0.00 seconds\nCgl0003I 0 fixed, 0 tightened bounds, 1 strengthened ",
+  "stderr": "",
+  "result": {
+    "objective": 26.0,
+    "solution": [
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "feasible": true
+  },
+  "objective": 26.0,
+  "ground_truth": 26,
+  "runnable": true,
+  "verdict": "optimal"
+}

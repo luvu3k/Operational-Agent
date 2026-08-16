@@ -1,0 +1,27 @@
+{
+  "system": "OptAgent",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C03_assignment",
+  "nl": "有3个工人和3项任务，工人i完成任务j的成本矩阵为[[9,2,7],[6,4,3],[5,8,1]]（行是工人，列是任务）。每个工人恰好分配一项任务，每项任务恰好由一个工人完成。请给出总成本最小的分配方案和最小总成本。",
+  "math_model": "决策变量：x_{ij} ∈ {0,1}，表示工人i是否分配任务j（1=分配，0=不分配）\n\n目标函数：minimize Σ_{i=1}^3 Σ_{j=1}^3 c_{ij} * x_{ij}，其中c_{ij}是成本矩阵\n\n约束：\n1. 每个工人分配一项任务：Σ_{j=1}^3 x_{ij} = 1, ∀i ∈ {1,2,3}\n2. 每项任务由一个工人完成：Σ_{i=1}^3 x_{ij} = 1, ∀j ∈ {1,2,3}",
+  "code": "import os as _os\n_os.environ.setdefault('RESULT_PATH', '/Applications/yhy/Operational_Agent/artifacts/runs/assignment_20260816_general_llm_152552/result.json')\nimport pulp\nimport os\nimport json\n\n# 成本矩阵 (workers x tasks)\ncosts = [\n    [9, 2, 7],\n    [6, 4, 3],\n    [5, 8, 1]\n]\n\n# 创建问题实例\nprob = pulp.LpProblem(\"Worker_Task_Assignment\", pulp.LpMinimize)\n\n# 工人和任务索引\nworkers = range(3)\ntasks = range(3)\n\n# 创建决策变量\nx = pulp.LpVariable.dicts(\"assign\", \n                         [(w, t) for w in workers for t in tasks],\n                         cat='Binary')\n\n# 目标函数：最小化总成本\nprob += pulp.lpSum([costs[w][t] * x[(w, t)] for w in workers for t in tasks])\n\n# 约束：每个工人分配一项任务\nfor w in workers:\n    prob += pulp.lpSum([x[(w, t)] for t in tasks]) == 1\n\n# 约束：每项任务由一个工人完成\nfor t in tasks:\n    prob += pulp.lpSum([x[(w, t)] for w in workers]) == 1\n\n# 求解问题\nprob.solve()\n\n# 收集结果\nsolution = {}\ntotal_cost = 0\nfor w in workers:\n    for t in tasks:\n        if x[(w, t)].value() == 1:\n            solution[f\"Worker {w+1}\"] = f\"Task {t+1}\"\n            total_cost += costs[w][t]\n\n# 输出结果\nprint(\"Optimal Assignment:\")\nfor worker, task in solution.items():\n    print(f\"{worker} -> {task}\")\nprint(f\"Minimum Total Cost: {total_cost}\")\n\n# 保存到JSON\nresult = {\n    \"objective\": total_cost,\n    \"solution\": solution,\n    \"feasible\": pulp.LpStatus[prob.status] == \"Optimal\"\n}\n\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f, indent=2)",
+  "explanation": "1. 问题描述：我们需要将3个工人分配到3个任务上，每个工人做一项任务，每项任务由一个工人完成，目标是总成本最小。\n\n2. 建模方法：\n   - 用0-1变量表示每个工人是否被分配到某个任务\n   - 目标是最小化所有分配的成本总和\n   - 两个约束确保分配的一对一关系\n\n3. 求解过程：\n   - 使用线性规划库PuLP建立模型\n   - 将成本矩阵转换为数学表达式\n   - 添加分配约束确保合法解\n   - 调用求解器计算最优分配\n\n4. 结果解读：\n   - 程序输出具体分配方案和最小总成本\n   - 结果会保存在result.json中，包含目标值、分配方案和可行性状态\n   - 例如可能得到\"工人1->任务2，工人2->任务3，工人3->任务1\"这样的分配\n\n5. 最优性保证：\n   - 由于问题规模小，PuLP使用精确算法能保证找到全局最优解\n   - 对于更大的问题可能需要更高效的算法或启发式方法",
+  "raw_output": "===MODEL===\n决策变量：x_{ij} ∈ {0,1}，表示工人i是否分配任务j（1=分配，0=不分配）\n\n目标函数：minimize Σ_{i=1}^3 Σ_{j=1}^3 c_{ij} * x_{ij}，其中c_{ij}是成本矩阵\n\n约束：\n1. 每个工人分配一项任务：Σ_{j=1}^3 x_{ij} = 1, ∀i ∈ {1,2,3}\n2. 每项任务由一个工人完成：Σ_{i=1}^3 x_{ij} = 1, ∀j ∈ {1,2,3}\n\n===CODE===\n```python\nimport pulp\nimport os\nimport json\n\n# 成本矩阵 (workers x tasks)\ncosts = [\n    [9, 2, 7],\n    [6, 4, 3],\n    [5, 8, 1]\n]\n\n# 创建问题实例\nprob = pulp.LpProblem(\"Worker_Task_Assignment\", pulp.LpMinimize)\n\n# 工人和任务索引\nworkers = range(3)\ntasks = range(3)\n\n# 创建决策变量\nx = pulp.LpVariable.dicts(\"assign\", \n                         [(w, t) for w in workers for t in tasks],\n                         cat='Binary')\n\n# 目标函数：最小化总成本\nprob += pulp.lpSum([costs[w][t] * x[(w, t)] for w in workers for t in tasks])\n\n# 约束：每个工人分配一项任务\nfor w in workers:\n    prob += pulp.lpSum([x[(w, t)] for t in tasks]) == 1\n\n# 约束：每项任务由一个工人完成\nfor t in tasks:\n    prob += pulp.lpSum([x[(w, t)] for w in workers]) == 1\n\n# 求解问题\nprob.solve()\n\n# 收集结果\nsolution = {}\ntotal_cost = 0\nfor w in workers:\n    for t in tasks:\n        if x[(w, t)].value() == 1:\n            solution[f\"Worker {w+1}\"] = f\"Task {t+1}\"\n            total_cost += costs[w][t]\n\n# 输出结果\nprint(\"Optimal Assignment:\")\nfor worker, task in solution.items():\n    print(f\"{worker} -> {task}\")\nprint(f\"Minimum Total Cost: {total_cost}\")\n\n# 保存到JSON\nresult = {\n    \"objective\": total_cost,\n    \"solution\": solution,\n    \"feasible\": pulp.LpStatus[prob.status] == \"Optimal\"\n}\n\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f, indent=2)\n```\n\n===EXPLANATION===\n1. 问题描述：我们需要将3个工人分配到3个任务上，每个工人做一项任务，每项任务由一个工人完成，目标是总成本最小。\n\n2. 建模方法：\n   - 用0-1变量表示每个工人是否被分配到某个任务\n   - 目标是最小化所有分配的成本总和\n   - 两个约束确保分配的一对一关系\n\n3. 求解过程：\n   - 使用线性规划库PuLP建立模型\n   - 将成本矩阵转换为数学表达式\n   - 添加分配约束确保合法解\n   - 调用求解器计算最优分配\n\n4. 结果解读：\n   - 程序输出具体分配方案和最小总成本\n   - 结果会保存在result.json中，包含目标值、分配方案和可行性状态\n   - 例如可能得到\"工人1->任务2，工人2->任务3，工人3->任务1\"这样的分配\n\n5. 最优性保证：\n   - 由于问题规模小，PuLP使用精确算法能保证找到全局最优解\n   - 对于更大的问题可能需要更高效的算法或启发式方法",
+  "elapsed_s": 34.08,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/a8929577c27d4a8a89107aed771e6073-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/a8929577c27d4a8a89107aed771e6073-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 11 COL",
+  "stderr": "",
+  "result": {
+    "objective": 9,
+    "solution": {
+      "Worker 1": "Task 2",
+      "Worker 2": "Task 1",
+      "Worker 3": "Task 3"
+    },
+    "feasible": true
+  },
+  "objective": 9.0,
+  "ground_truth": 9,
+  "runnable": true,
+  "verdict": "optimal"
+}

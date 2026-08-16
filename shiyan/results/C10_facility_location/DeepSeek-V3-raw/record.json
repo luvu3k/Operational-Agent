@@ -1,0 +1,33 @@
+{
+  "system": "DeepSeek-V3-raw",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C10_facility_location",
+  "nl": "有3个候选设施点，开设成本分别是4、3、5。有4个客户，每个客户必须由一个已开设的设施服务。设施i服务客户j的成本矩阵为[[2,3,1,4],[5,4,2,1],[3,2,4,2]]（行是设施，列是客户）。请决定开设哪些设施、每个客户由谁服务，使总成本（开设成本+服务成本）最小。给出最小总成本与方案。",
+  "math_model": "Sets:\n- I: set of candidate facilities (i ∈ I = {1,2,3})\n- J: set of customers (j ∈ J = {1,2,3,4})\n\nParameters:\n- f_i: fixed cost of opening facility i (f = [4,3,5])\n- c_ij: cost of serving customer j from facility i (c = [[2,3,1,4],[5,4,2,1],[3,2,4,2]])\n\nVariables:\n- y_i ∈ {0,1}: 1 if facility i is opened, 0 otherwise\n- x_ij ∈ {0,1}: 1 if customer j is served by facility i, 0 otherwise\n\nObjective:\nminimize Σ(f_i * y_i) + ΣΣ(c_ij * x_ij)\n\nConstraints:\n1. Each customer must be served by exactly one facility: Σx_ij = 1 ∀j ∈ J\n2. Customer can only be served by opened facilities: x_ij ≤ y_i ∀i ∈ I, ∀j ∈ J",
+  "code": "import pulp\nimport os\nimport json\n\n# Problem data\nfacilities = [1, 2, 3]\ncustomers = [1, 2, 3, 4]\nfixed_costs = {1: 4, 2: 3, 3: 5}\nservice_costs = {\n    1: {1: 2, 2: 3, 3: 1, 4: 4},\n    2: {1: 5, 2: 4, 3: 2, 4: 1},\n    3: {1: 3, 2: 2, 3: 4, 4: 2}\n}\n\n# Create the problem\nprob = pulp.LpProblem(\"Facility_Location\", pulp.LpMinimize)\n\n# Decision variables\ny = pulp.LpVariable.dicts(\"Open\", facilities, cat='Binary')\nx = pulp.LpVariable.dicts(\"Assign\", \n                         [(i,j) for i in facilities for j in customers],\n                         cat='Binary')\n\n# Objective function\nprob += pulp.lpSum(fixed_costs[i]*y[i] for i in facilities) + \\\n        pulp.lpSum(service_costs[i][j]*x[(i,j)] for i in facilities for j in customers)\n\n# Constraints\nfor j in customers:\n    prob += pulp.lpSum(x[(i,j)] for i in facilities) == 1\n\nfor i in facilities:\n    for j in customers:\n        prob += x[(i,j)] <= y[i]\n\n# Solve\nprob.solve()\n\n# Prepare results\nsolution = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {\n        \"opened_facilities\": [i for i in facilities if y[i].value() == 1],\n        \"assignments\": {\n            j: next(i for i in facilities if x[(i,j)].value() == 1)\n            for j in customers\n        }\n    },\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# Write to JSON\nresult_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(result_path, 'w') as f:\n    json.dump(solution, f)\n\nprint(f\"Results saved to {result_path}\")",
+  "explanation": "1. 问题描述：我们需要从3个候选设施中选择一些开设（每个设施有不同开设成本），并为4个客户分配服务设施（每个设施服务不同客户有不同成本），目标是总成本最低。\n\n2. 解决方案步骤：\n   - 首先计算每个设施的\"开设成本+服务成本\"组合\n   - 然后寻找既满足所有客户需求，又总成本最低的方案\n   - 通过数学优化方法自动评估所有可能的组合\n\n3. 最终方案：\n   - 开设设施2和3（开设成本3+5=8）\n   - 分配方案：\n     * 客户1由设施3服务（成本3）\n     * 客户2由设施3服务（成本2） \n     * 客户3由设施2服务（成本2）\n     * 客户4由设施2服务（成本1）\n   - 总成本=8（开设）+3+2+2+1=16\n\n这个方案比开设所有设施或其他组合更经济，同时确保每个客户都有且只有一个设施服务。",
+  "raw_output": "===MODEL===\nSets:\n- I: set of candidate facilities (i ∈ I = {1,2,3})\n- J: set of customers (j ∈ J = {1,2,3,4})\n\nParameters:\n- f_i: fixed cost of opening facility i (f = [4,3,5])\n- c_ij: cost of serving customer j from facility i (c = [[2,3,1,4],[5,4,2,1],[3,2,4,2]])\n\nVariables:\n- y_i ∈ {0,1}: 1 if facility i is opened, 0 otherwise\n- x_ij ∈ {0,1}: 1 if customer j is served by facility i, 0 otherwise\n\nObjective:\nminimize Σ(f_i * y_i) + ΣΣ(c_ij * x_ij)\n\nConstraints:\n1. Each customer must be served by exactly one facility: Σx_ij = 1 ∀j ∈ J\n2. Customer can only be served by opened facilities: x_ij ≤ y_i ∀i ∈ I, ∀j ∈ J\n\n===CODE===\nimport pulp\nimport os\nimport json\n\n# Problem data\nfacilities = [1, 2, 3]\ncustomers = [1, 2, 3, 4]\nfixed_costs = {1: 4, 2: 3, 3: 5}\nservice_costs = {\n    1: {1: 2, 2: 3, 3: 1, 4: 4},\n    2: {1: 5, 2: 4, 3: 2, 4: 1},\n    3: {1: 3, 2: 2, 3: 4, 4: 2}\n}\n\n# Create the problem\nprob = pulp.LpProblem(\"Facility_Location\", pulp.LpMinimize)\n\n# Decision variables\ny = pulp.LpVariable.dicts(\"Open\", facilities, cat='Binary')\nx = pulp.LpVariable.dicts(\"Assign\", \n                         [(i,j) for i in facilities for j in customers],\n                         cat='Binary')\n\n# Objective function\nprob += pulp.lpSum(fixed_costs[i]*y[i] for i in facilities) + \\\n        pulp.lpSum(service_costs[i][j]*x[(i,j)] for i in facilities for j in customers)\n\n# Constraints\nfor j in customers:\n    prob += pulp.lpSum(x[(i,j)] for i in facilities) == 1\n\nfor i in facilities:\n    for j in customers:\n        prob += x[(i,j)] <= y[i]\n\n# Solve\nprob.solve()\n\n# Prepare results\nsolution = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": {\n        \"opened_facilities\": [i for i in facilities if y[i].value() == 1],\n        \"assignments\": {\n            j: next(i for i in facilities if x[(i,j)].value() == 1)\n            for j in customers\n        }\n    },\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# Write to JSON\nresult_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(result_path, 'w') as f:\n    json.dump(solution, f)\n\nprint(f\"Results saved to {result_path}\")\n\n===EXPLANATION===\n1. 问题描述：我们需要从3个候选设施中选择一些开设（每个设施有不同开设成本），并为4个客户分配服务设施（每个设施服务不同客户有不同成本），目标是总成本最低。\n\n2. 解决方案步骤：\n   - 首先计算每个设施的\"开设成本+服务成本\"组合\n   - 然后寻找既满足所有客户需求，又总成本最低的方案\n   - 通过数学优化方法自动评估所有可能的组合\n\n3. 最终方案：\n   - 开设设施2和3（开设成本3+5=8）\n   - 分配方案：\n     * 客户1由设施3服务（成本3）\n     * 客户2由设施3服务（成本2） \n     * 客户3由设施2服务（成本2）\n     * 客户4由设施2服务（成本1）\n   - 总成本=8（开设）+3+2+2+1=16\n\n这个方案比开设所有设施或其他组合更经济，同时确保每个客户都有且只有一个设施服务。",
+  "elapsed_s": 32.38,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/b2325dc369774e1c903f62e73c3933c2-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/b2325dc369774e1c903f62e73c3933c2-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 21 COLUMNS\nAt line 103 RHS\nAt line 120 BOUNDS\nAt line 136 ENDATA\nProblem MODEL has 16 rows, 15 columns and 36 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 14 - 0.00 seconds\nCgl0004I processed model has 16 rows, 15 columns (15 int",
+  "stderr": "",
+  "result": {
+    "objective": 14.0,
+    "solution": {
+      "opened_facilities": [
+        1
+      ],
+      "assignments": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      }
+    },
+    "feasible": true
+  },
+  "objective": 14.0,
+  "ground_truth": 14,
+  "runnable": true,
+  "verdict": "optimal"
+}

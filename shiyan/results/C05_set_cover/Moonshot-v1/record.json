@@ -1,0 +1,28 @@
+{
+  "system": "Moonshot-v1",
+  "model": "moonshot-v1-8k",
+  "case": "C05_set_cover",
+  "nl": "全集是{1,2,3,4,5}。有4个子集：S1={1,2,3}，S2={2,4}，S3={3,4}，S4={4,5}。请选择数量最少的子集，使它们的并集覆盖全集。给出最少子集数量和选择方案。",
+  "math_model": "Let x_i be a binary variable where x_i = 1 if subset Si is selected, and x_i = 0 otherwise. The objective is to minimize the number of selected subsets, subject to the constraint that the union of the selected subsets covers the entire set {1,2,3,4,5}.\n\nObjective:\nMinimize: sum(x_i for i in range(1, 5))\n\nConstraints:\n1. x_1 + x_2 >= 1 (to cover element 2)\n2. x_1 + x_3 >= 1 (to cover element 3)\n3. x_2 + x_3 + x_4 >= 1 (to cover element 4)\n4. x_1 + x_4 >= 1 (to cover element 5)\n5. x_i is binary for i in range(1, 5)",
+  "code": "import pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimum_Subset_Cover\", pulp.LpMinimize)\n\n# Define the binary variables\nx = pulp.LpVariable.dicts(\"x\", range(1, 5), cat='Binary')\n\n# Define the objective function\nproblem += pulp.lpSum([x[i] for i in range(1, 5)])\n\n# Define the constraints\nproblem += x[1] + x[2] >= 1  # to cover element 2\nproblem += x[1] + x[3] >= 1  # to cover element 3\nproblem += x[2] + x[3] + x[4] >= 1  # to cover element 4\nproblem += x[1] + x[4] >= 1  # to cover element 5\n\n# Solve the problem\nproblem.solve()\n\n# Store the result in a dictionary\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: pulp.value(x[i]) for i in range(1, 5)},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\n# Write the result to a JSON file\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)",
+  "explanation": "这个问题是一个典型的最小集合覆盖问题。我们的目标是选择最少数量的子集，使得它们的并集能够覆盖全集{1,2,3,4,5}。\n\n1. 我们首先定义了一个线性规划问题，目标是最小化选择的子集数量。\n2. 我们为每个子集定义了一个二元变量x_i，如果子集Si被选择，则x_i为1，否则为0。\n3. 我们添加了四个约束条件，确保每个元素至少被一个选择的子集覆盖。\n4. 我们使用pulp库来求解这个问题，并得到了最优解。\n5. 我们将结果存储在一个字典中，并将其写入一个JSON文件中。这个文件包含了目标函数的值、每个子集的选择情况以及解是否可行。",
+  "raw_output": "===MODEL===\nLet x_i be a binary variable where x_i = 1 if subset Si is selected, and x_i = 0 otherwise. The objective is to minimize the number of selected subsets, subject to the constraint that the union of the selected subsets covers the entire set {1,2,3,4,5}.\n\nObjective:\nMinimize: sum(x_i for i in range(1, 5))\n\nConstraints:\n1. x_1 + x_2 >= 1 (to cover element 2)\n2. x_1 + x_3 >= 1 (to cover element 3)\n3. x_2 + x_3 + x_4 >= 1 (to cover element 4)\n4. x_1 + x_4 >= 1 (to cover element 5)\n5. x_i is binary for i in range(1, 5)\n\n===CODE===\n```python\nimport pulp\nimport json\nimport os\n\n# Define the problem\nproblem = pulp.LpProblem(\"Minimum_Subset_Cover\", pulp.LpMinimize)\n\n# Define the binary variables\nx = pulp.LpVariable.dicts(\"x\", range(1, 5), cat='Binary')\n\n# Define the objective function\nproblem += pulp.lpSum([x[i] for i in range(1, 5)])\n\n# Define the constraints\nproblem += x[1] + x[2] >= 1  # to cover element 2\nproblem += x[1] + x[3] >= 1  # to cover element 3\nproblem += x[2] + x[3] + x[4] >= 1  # to cover element 4\nproblem += x[1] + x[4] >= 1  # to cover element 5\n\n# Solve the problem\nproblem.solve()\n\n# Store the result in a dictionary\nresult = {\n    \"objective\": pulp.value(problem.objective),\n    \"solution\": {i: pulp.value(x[i]) for i in range(1, 5)},\n    \"feasible\": pulp.LpStatus[problem.status] == \"Optimal\"\n}\n\n# Write the result to a JSON file\nwith open(os.environ['RESULT_PATH'], 'w') as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n这个问题是一个典型的最小集合覆盖问题。我们的目标是选择最少数量的子集，使得它们的并集能够覆盖全集{1,2,3,4,5}。\n\n1. 我们首先定义了一个线性规划问题，目标是最小化选择的子集数量。\n2. 我们为每个子集定义了一个二元变量x_i，如果子集Si被选择，则x_i为1，否则为0。\n3. 我们添加了四个约束条件，确保每个元素至少被一个选择的子集覆盖。\n4. 我们使用pulp库来求解这个问题，并得到了最优解。\n5. 我们将结果存储在一个字典中，并将其写入一个JSON文件中。这个文件包含了目标函数的值、每个子集的选择情况以及解是否可行。",
+  "elapsed_s": 10.32,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/01d7725d35e94629b6fe3808ad033498-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/01d7725d35e94629b6fe3808ad033498-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 9 COLUMNS\nAt line 31 RHS\nAt line 36 BOUNDS\nAt line 41 ENDATA\nProblem MODEL has 4 rows, 4 columns and 9 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 1.66667 - 0.00 seconds\nCgl0003I 0 fixed, 0 tightened bounds, 1 strengthened rows,",
+  "stderr": "",
+  "result": {
+    "objective": 2.0,
+    "solution": {
+      "1": 1.0,
+      "2": 0.0,
+      "3": 1.0,
+      "4": 0.0
+    },
+    "feasible": true
+  },
+  "objective": 2.0,
+  "ground_truth": 2,
+  "runnable": true,
+  "verdict": "optimal"
+}

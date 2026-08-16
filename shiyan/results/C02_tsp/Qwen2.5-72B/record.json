@@ -1,0 +1,19 @@
+{
+  "system": "Qwen2.5-72B",
+  "model": "Qwen/Qwen2.5-72B-Instruct",
+  "case": "C02_tsp",
+  "nl": "一个销售员要访问5个城市，坐标分别是A(0,0)、B(0,4)、C(4,4)、D(4,0)、E(2,2)，从A出发访问每个城市恰好一次最后回到A。城市间距离为欧氏距离。请给出总距离最短的巡回路线和最短总距离。",
+  "math_model": "",
+  "code": "",
+  "explanation": "",
+  "raw_output": "",
+  "elapsed_s": 181.8,
+  "returncode": -1,
+  "stdout": "",
+  "stderr": "APITimeoutError: Request timed out.",
+  "result": {},
+  "objective": null,
+  "ground_truth": 17.6569,
+  "runnable": false,
+  "verdict": "no_result"
+}

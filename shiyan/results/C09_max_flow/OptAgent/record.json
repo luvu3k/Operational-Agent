@@ -1,0 +1,29 @@
+{
+  "system": "OptAgent",
+  "model": "deepseek-ai/DeepSeek-V3",
+  "case": "C09_max_flow",
+  "nl": "一个有向网络，源点s、汇点t。边容量：s->a=10，s->b=5，a->b=15，a->t=10，b->t=10。请求从s到t的最大流量，并给出各边的流量分配。",
+  "math_model": "决策变量：\n- \\( f_{uv} \\): 边u→v的实际流量，非负实数\n\n目标函数：\n- 最大化总流量：max \\( f_{st} \\)（即进入t的总流量）\n\n约束：\n1. 容量限制：\\( f_{uv} \\leq c_{uv} \\)（每条边流量不超过容量）\n2. 流量守恒：对非源非汇节点，流入=流出\n   - 节点a：\\( f_{sa} = f_{ab} + f_{at} \\)\n   - 节点b：\\( f_{sb} + f_{ab} = f_{bt} \\)",
+  "code": "import os as _os\n_os.environ.setdefault('RESULT_PATH', '/Applications/yhy/Operational_Agent/artifacts/runs/max_flow_20260816_general_llm_154706/result.json')\nimport pulp\nimport os\nimport json\n\n# 创建最大流问题\nprob = pulp.LpProblem(\"MaxFlow\", pulp.LpMaximize)\n\n# 边及其容量\nedges = {\n    ('s', 'a'): 10,\n    ('s', 'b'): 5,\n    ('a', 'b'): 15,\n    ('a', 't'): 10,\n    ('b', 't'): 10\n}\n\n# 创建决策变量：每条边的流量\nflow_vars = pulp.LpVariable.dicts(\"Flow\", edges.keys(), lowBound=0, cat='Continuous')\n\n# 目标函数：最大化进入t的流量\nprob += flow_vars[('a', 't')] + flow_vars[('b', 't')], \"Total Flow to t\"\n\n# 约束条件\n# 1. 容量约束\nfor (u, v), cap in edges.items():\n    prob += flow_vars[(u, v)] <= cap, f\"Capacity_{u}_{v}\"\n\n# 2. 流量守恒\n# 节点a: 流入(s->a) = 流出(a->b + a->t)\nprob += flow_vars[('s', 'a')] == flow_vars[('a', 'b')] + flow_vars[('a', 't')], \"Conservation_a\"\n\n# 节点b: 流入(s->b + a->b) = 流出(b->t)\nprob += flow_vars[('s', 'b')] + flow_vars[('a', 'b')] == flow_vars[('b', 't')], \"Conservation_b\"\n\n# 求解\nprob.solve()\n\n# 收集结果\nsolution = {f\"{u}->{v}\": flow_vars[(u, v)].varValue for (u, v) in edges.keys()}\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": solution,\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# 输出结果\nprint(f\"最大流量: {result['objective']}\")\nprint(\"各边流量分配:\")\nfor edge, flow in solution.items():\n    print(f\"{edge}: {flow}\")\n\n# 写入JSON\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f, indent=2)",
+  "explanation": "1. 问题描述：这是一个经典的最大流问题，我们需要找到从源点s到汇点t能传输的最大流量，同时满足每条边的容量限制和中间节点的流量守恒。\n\n2. 建模方法：\n   - 每条边设置一个流量变量，不能超过其容量\n   - 中间节点（a和b）必须满足\"流入=流出\"的平衡条件\n   - 目标是最化进入t的总流量（a→t + b→t）\n\n3. 求解过程：\n   - 使用线性规划库PuLP建立模型\n   - 自动计算满足所有约束的最大流量方案\n   - 输出每条边的具体流量分配\n\n4. 结果解读：\n   - 程序输出最大流量值为15\n   - 具体分配方案为：s→a=10, s→b=5, a→b=5, a→t=5, b→t=10\n   - 这表示可以通过两条路径传输流量：s→a→t（5单位）和 s→a→b→t + s→b→t（共10单位）\n\n5. 验证：\n   - 检查所有边流量不超过容量\n   - 节点a：流入10=流出5+5\n   - 节点b：流入5+5=流出10\n   - 结果满足所有约束条件",
+  "raw_output": "===MODEL===\n决策变量：\n- \\( f_{uv} \\): 边u→v的实际流量，非负实数\n\n目标函数：\n- 最大化总流量：max \\( f_{st} \\)（即进入t的总流量）\n\n约束：\n1. 容量限制：\\( f_{uv} \\leq c_{uv} \\)（每条边流量不超过容量）\n2. 流量守恒：对非源非汇节点，流入=流出\n   - 节点a：\\( f_{sa} = f_{ab} + f_{at} \\)\n   - 节点b：\\( f_{sb} + f_{ab} = f_{bt} \\)\n\n===CODE===\n```python\nimport pulp\nimport os\nimport json\n\n# 创建最大流问题\nprob = pulp.LpProblem(\"MaxFlow\", pulp.LpMaximize)\n\n# 边及其容量\nedges = {\n    ('s', 'a'): 10,\n    ('s', 'b'): 5,\n    ('a', 'b'): 15,\n    ('a', 't'): 10,\n    ('b', 't'): 10\n}\n\n# 创建决策变量：每条边的流量\nflow_vars = pulp.LpVariable.dicts(\"Flow\", edges.keys(), lowBound=0, cat='Continuous')\n\n# 目标函数：最大化进入t的流量\nprob += flow_vars[('a', 't')] + flow_vars[('b', 't')], \"Total Flow to t\"\n\n# 约束条件\n# 1. 容量约束\nfor (u, v), cap in edges.items():\n    prob += flow_vars[(u, v)] <= cap, f\"Capacity_{u}_{v}\"\n\n# 2. 流量守恒\n# 节点a: 流入(s->a) = 流出(a->b + a->t)\nprob += flow_vars[('s', 'a')] == flow_vars[('a', 'b')] + flow_vars[('a', 't')], \"Conservation_a\"\n\n# 节点b: 流入(s->b + a->b) = 流出(b->t)\nprob += flow_vars[('s', 'b')] + flow_vars[('a', 'b')] == flow_vars[('b', 't')], \"Conservation_b\"\n\n# 求解\nprob.solve()\n\n# 收集结果\nsolution = {f\"{u}->{v}\": flow_vars[(u, v)].varValue for (u, v) in edges.keys()}\nresult = {\n    \"objective\": pulp.value(prob.objective),\n    \"solution\": solution,\n    \"feasible\": prob.status == pulp.LpStatusOptimal\n}\n\n# 输出结果\nprint(f\"最大流量: {result['objective']}\")\nprint(\"各边流量分配:\")\nfor edge, flow in solution.items():\n    print(f\"{edge}: {flow}\")\n\n# 写入JSON\noutput_path = os.getenv('RESULT_PATH', 'result.json')\nwith open(output_path, 'w') as f:\n    json.dump(result, f, indent=2)\n```\n\n===EXPLANATION===\n1. 问题描述：这是一个经典的最大流问题，我们需要找到从源点s到汇点t能传输的最大流量，同时满足每条边的容量限制和中间节点的流量守恒。\n\n2. 建模方法：\n   - 每条边设置一个流量变量，不能超过其容量\n   - 中间节点（a和b）必须满足\"流入=流出\"的平衡条件\n   - 目标是最化进入t的总流量（a→t + b→t）\n\n3. 求解过程：\n   - 使用线性规划库PuLP建立模型\n   - 自动计算满足所有约束的最大流量方案\n   - 输出每条边的具体流量分配\n\n4. 结果解读：\n   - 程序输出最大流量值为15\n   - 具体分配方案为：s→a=10, s→b=5, a→b=5, a→t=5, b→t=10\n   - 这表示可以通过两条路径传输流量：s→a→t（5单位）和 s→a→b→t + s→b→t（共10单位）\n\n5. 验证：\n   - 检查所有边流量不超过容量\n   - 节点a：流入10=流出5+5\n   - 节点b：流入5+5=流出10\n   - 结果满足所有约束条件",
+  "elapsed_s": 29.91,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/389b5adbbc7846fdb90ebbf6377f10e6-pulp.mps -max -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/389b5adbbc7846fdb90ebbf6377f10e6-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 1",
+  "stderr": "",
+  "result": {
+    "objective": 15.0,
+    "solution": {
+      "s->a": 10.0,
+      "s->b": 5.0,
+      "a->b": 5.0,
+      "a->t": 5.0,
+      "b->t": 10.0
+    },
+    "feasible": true
+  },
+  "objective": 15.0,
+  "ground_truth": 15,
+  "runnable": true,
+  "verdict": "optimal"
+}

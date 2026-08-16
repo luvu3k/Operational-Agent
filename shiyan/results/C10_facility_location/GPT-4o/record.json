@@ -1,0 +1,49 @@
+{
+  "system": "GPT-4o",
+  "model": "gpt-4o",
+  "case": "C10_facility_location",
+  "nl": "有3个候选设施点，开设成本分别是4、3、5。有4个客户，每个客户必须由一个已开设的设施服务。设施i服务客户j的成本矩阵为[[2,3,1,4],[5,4,2,1],[3,2,4,2]]（行是设施，列是客户）。请决定开设哪些设施、每个客户由谁服务，使总成本（开设成本+服务成本）最小。给出最小总成本与方案。",
+  "math_model": "数学模型如下：\n\n集合：\n- 设施集合 \\( I = \\{1, 2, 3\\} \\)\n- 客户集合 \\( J = \\{1, 2, 3, 4\\} \\)\n\n参数：\n- 开设成本 \\( f_i \\): \\( f_1 = 4, f_2 = 3, f_3 = 5 \\)\n- 服务成本矩阵 \\( c_{ij} \\): \n  \\[\n  c_{ij} = \n  \\begin{bmatrix}\n  2 & 3 & 1 & 4 \\\\\n  5 & 4 & 2 & 1 \\\\\n  3 & 2 & 4 & 2\n  \\end{bmatrix}\n  \\]\n\n决策变量：\n- \\( x_i \\): 二元变量，表示设施 \\( i \\) 是否开设 (\\( x_i = 1 \\) 表示开设，\\( x_i = 0 \\) 表示不开设)\n- \\( y_{ij} \\): 二元变量，表示客户 \\( j \\) 是否由设施 \\( i \\) 服务 (\\( y_{ij} = 1 \\) 表示服务，\\( y_{ij} = 0 \\) 表示不服务)\n\n目标函数：\n\\[\n\\text{最小化 } \\sum_{i \\in I} f_i x_i + \\sum_{i \\in I} \\sum_{j \\in J} c_{ij} y_{ij}\n\\]\n\n约束条件：\n1. 每个客户必须由一个设施服务：\n   \\[\n   \\sum_{i \\in I} y_{ij} = 1, \\quad \\forall j \\in J\n   \\]\n2. 客户只能由已开设的设施服务：\n   \\[\n   y_{ij} \\leq x_i, \\quad \\forall i \\in I, \\forall j \\in J\n   \\]\n3. 决策变量是二元变量：\n   \\[\n   x_i \\in \\{0, 1\\}, \\quad y_{ij} \\in \\{0, 1\\}, \\quad \\forall i \\in I, \\forall j \\in J\n   \\]",
+  "code": "import os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Parameters\nfacility_costs = [4, 3, 5]\nservice_costs = [\n    [2, 3, 1, 4],\n    [5, 4, 2, 1],\n    [3, 2, 4, 2]\n]\nnum_facilities = len(facility_costs)\nnum_customers = len(service_costs[0])\n\n# Problem definition\nproblem = LpProblem(\"Facility_Location\", LpMinimize)\n\n# Decision variables\nx = [LpVariable(f\"x_{i}\", cat=LpBinary) for i in range(num_facilities)]\ny = [[LpVariable(f\"y_{i}_{j}\", cat=LpBinary) for j in range(num_customers)] for i in range(num_facilities)]\n\n# Objective function\nproblem += lpSum(facility_costs[i] * x[i] for i in range(num_facilities)) + \\\n           lpSum(service_costs[i][j] * y[i][j] for i in range(num_facilities) for j in range(num_customers))\n\n# Constraints\n# Each customer is served by exactly one facility\nfor j in range(num_customers):\n    problem += lpSum(y[i][j] for i in range(num_facilities)) == 1\n\n# A customer can only be served by an open facility\nfor i in range(num_facilities):\n    for j in range(num_customers):\n        problem += y[i][j] <= x[i]\n\n# Solve the problem\nproblem.solve()\n\n# Extract results\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": {\n        \"facilities_open\": [int(x[i].varValue) for i in range(num_facilities)],\n        \"customer_assignment\": [\n            [int(y[i][j].varValue) for j in range(num_customers)] for i in range(num_facilities)\n        ]\n    },\n    \"feasible\": problem.status == 1\n}\n\n# Write results to JSON\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)",
+  "explanation": "1. **问题描述**：\n   我们需要决定在哪些设施点开设设施，以及每个客户由哪个设施服务，以最小化总成本。总成本包括设施的开设成本和服务客户的成本。\n\n2. **数学模型**：\n   - 我们定义了二元变量 \\( x_i \\) 表示设施是否开设，\\( y_{ij} \\) 表示客户是否由某设施服务。\n   - 目标是最小化开设成本和服务成本的总和。\n   - 约束条件确保每个客户必须由一个设施服务，且客户只能由已开设的设施服务。\n\n3. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义了决策变量 \\( x \\) 和 \\( y \\)，并设置了目标函数和约束条件。\n   - 使用 `problem.solve()` 求解问题，并将结果保存到 JSON 文件中，包含最小总成本、开设的设施和客户分配方案。\n\n4. **结果输出**：\n   - 结果以 JSON 格式保存，包含以下信息：\n     - `objective`: 最小总成本。\n     - `solution`: 包括开设的设施和客户分配方案。\n     - `feasible`: 问题是否有可行解。",
+  "raw_output": "===MODEL===\n\n数学模型如下：\n\n集合：\n- 设施集合 \\( I = \\{1, 2, 3\\} \\)\n- 客户集合 \\( J = \\{1, 2, 3, 4\\} \\)\n\n参数：\n- 开设成本 \\( f_i \\): \\( f_1 = 4, f_2 = 3, f_3 = 5 \\)\n- 服务成本矩阵 \\( c_{ij} \\): \n  \\[\n  c_{ij} = \n  \\begin{bmatrix}\n  2 & 3 & 1 & 4 \\\\\n  5 & 4 & 2 & 1 \\\\\n  3 & 2 & 4 & 2\n  \\end{bmatrix}\n  \\]\n\n决策变量：\n- \\( x_i \\): 二元变量，表示设施 \\( i \\) 是否开设 (\\( x_i = 1 \\) 表示开设，\\( x_i = 0 \\) 表示不开设)\n- \\( y_{ij} \\): 二元变量，表示客户 \\( j \\) 是否由设施 \\( i \\) 服务 (\\( y_{ij} = 1 \\) 表示服务，\\( y_{ij} = 0 \\) 表示不服务)\n\n目标函数：\n\\[\n\\text{最小化 } \\sum_{i \\in I} f_i x_i + \\sum_{i \\in I} \\sum_{j \\in J} c_{ij} y_{ij}\n\\]\n\n约束条件：\n1. 每个客户必须由一个设施服务：\n   \\[\n   \\sum_{i \\in I} y_{ij} = 1, \\quad \\forall j \\in J\n   \\]\n2. 客户只能由已开设的设施服务：\n   \\[\n   y_{ij} \\leq x_i, \\quad \\forall i \\in I, \\forall j \\in J\n   \\]\n3. 决策变量是二元变量：\n   \\[\n   x_i \\in \\{0, 1\\}, \\quad y_{ij} \\in \\{0, 1\\}, \\quad \\forall i \\in I, \\forall j \\in J\n   \\]\n\n===CODE===\n\n```python\nimport os\nimport json\nfrom pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpBinary, value\n\n# Parameters\nfacility_costs = [4, 3, 5]\nservice_costs = [\n    [2, 3, 1, 4],\n    [5, 4, 2, 1],\n    [3, 2, 4, 2]\n]\nnum_facilities = len(facility_costs)\nnum_customers = len(service_costs[0])\n\n# Problem definition\nproblem = LpProblem(\"Facility_Location\", LpMinimize)\n\n# Decision variables\nx = [LpVariable(f\"x_{i}\", cat=LpBinary) for i in range(num_facilities)]\ny = [[LpVariable(f\"y_{i}_{j}\", cat=LpBinary) for j in range(num_customers)] for i in range(num_facilities)]\n\n# Objective function\nproblem += lpSum(facility_costs[i] * x[i] for i in range(num_facilities)) + \\\n           lpSum(service_costs[i][j] * y[i][j] for i in range(num_facilities) for j in range(num_customers))\n\n# Constraints\n# Each customer is served by exactly one facility\nfor j in range(num_customers):\n    problem += lpSum(y[i][j] for i in range(num_facilities)) == 1\n\n# A customer can only be served by an open facility\nfor i in range(num_facilities):\n    for j in range(num_customers):\n        problem += y[i][j] <= x[i]\n\n# Solve the problem\nproblem.solve()\n\n# Extract results\nresult = {\n    \"objective\": value(problem.objective),\n    \"solution\": {\n        \"facilities_open\": [int(x[i].varValue) for i in range(num_facilities)],\n        \"customer_assignment\": [\n            [int(y[i][j].varValue) for j in range(num_customers)] for i in range(num_facilities)\n        ]\n    },\n    \"feasible\": problem.status == 1\n}\n\n# Write results to JSON\nresult_path = os.getenv(\"RESULT_PATH\", \"result.json\")\nwith open(result_path, \"w\") as f:\n    json.dump(result, f)\n```\n\n===EXPLANATION===\n\n1. **问题描述**：\n   我们需要决定在哪些设施点开设设施，以及每个客户由哪个设施服务，以最小化总成本。总成本包括设施的开设成本和服务客户的成本。\n\n2. **数学模型**：\n   - 我们定义了二元变量 \\( x_i \\) 表示设施是否开设，\\( y_{ij} \\) 表示客户是否由某设施服务。\n   - 目标是最小化开设成本和服务成本的总和。\n   - 约束条件确保每个客户必须由一个设施服务，且客户只能由已开设的设施服务。\n\n3. **代码实现**：\n   - 使用 `pulp` 库定义线性规划问题。\n   - 定义了决策变量 \\( x \\) 和 \\( y \\)，并设置了目标函数和约束条件。\n   - 使用 `problem.solve()` 求解问题，并将结果保存到 JSON 文件中，包含最小总成本、开设的设施和客户分配方案。\n\n4. **结果输出**：\n   - 结果以 JSON 格式保存，包含以下信息：\n     - `objective`: 最小总成本。\n     - `solution`: 包括开设的设施和客户分配方案。\n     - `feasible`: 问题是否有可行解。",
+  "elapsed_s": 9.7,
+  "returncode": 0,
+  "stdout": "Welcome to the CBC MILP Solver \nVersion: 2.10.3 \nBuild Date: Dec 15 2019 \n\ncommand line - /Applications/yhy/.venv/lib/python3.9/site-packages/pulp/apis/../solverdir/cbc/osx/i64/cbc /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/6d53200caa714b929fcfdeeae107036f-pulp.mps -timeMode elapsed -branch -printingOptions all -solution /var/folders/m0/wl6gthcj4glc_j4hx631p65r0000gn/T/6d53200caa714b929fcfdeeae107036f-pulp.sol (default strategy 1)\nAt line 2 NAME          MODEL\nAt line 3 ROWS\nAt line 21 COLUMNS\nAt line 103 RHS\nAt line 120 BOUNDS\nAt line 136 ENDATA\nProblem MODEL has 16 rows, 15 columns and 36 elements\nCoin0008I MODEL read with 0 errors\nOption for timeMode changed from cpu to elapsed\nContinuous objective value is 14 - 0.00 seconds\nCgl0004I processed model has 16 rows, 15 columns (15 int",
+  "stderr": "",
+  "result": {
+    "objective": 14.0,
+    "solution": {
+      "facilities_open": [
+        1,
+        1,
+        0
+      ],
+      "customer_assignment": [
+        [
+          1,
+          1,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "feasible": true
+  },
+  "objective": 14.0,
+  "ground_truth": 14,
+  "runnable": true,
+  "verdict": "optimal"
+}

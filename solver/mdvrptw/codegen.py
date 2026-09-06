@@ -18,7 +18,7 @@ def build_standalone_script(instance: Dict[str, Any], method: str, result_path: 
     header = f'''"""
 自动生成：MDVRPTW-P（带时间窗与优先级约束的多仓库车辆路径问题）求解脚本。
 求解方法：{method}
-目标口径：最小化 总航行时间 + 优先级违反惩罚；时间窗为硬约束。
+目标口径：最小化 R = w1 * 总航行时间 + w2 * 优先级违反惩罚（默认 w1=w2=1.0；论文算例取 w1=0.8, w2=0.2）；时间窗为硬约束。
 
 用法：
     python {{此文件}}
@@ -65,6 +65,7 @@ def evaluate(instance, routes):
     dist = _dist_matrix(nodes)
     p = instance["params"]
     v1, service, L = float(p["v1"]), float(p["service_time"]), float(p["priority_penalty_L"])
+    w1, w2 = float(p.get("w1", 1.0)), float(p.get("w2", 1.0))
     total_distance = priority_penalty = tw_violation = 0.0
     arrival, visited = {}, []
     for route in routes:
@@ -90,7 +91,7 @@ def evaluate(instance, routes):
     travel_time = total_distance / v1
     served_ok = sorted(visited) == launch_ids and len(visited) == len(set(visited))
     return {
-        "objective": travel_time + priority_penalty,
+        "objective": w1 * travel_time + w2 * priority_penalty,
         "travel_time": travel_time,
         "priority_penalty": priority_penalty,
         "tw_violation": tw_violation,
@@ -111,6 +112,7 @@ def solve():
     p = INSTANCE["params"]
     v1, service, max_veh = float(p["v1"]), float(p["service_time"]), int(p["max_vehicles_per_depot"])
     L = float(p["priority_penalty_L"])
+    w1, w2 = float(p.get("w1", 1.0)), float(p.get("w2", 1.0))
     tr = lambda i, j: dist[(i, j)] / v1
     dc = [(m, j) for m in depot_ids for j in launch_ids]
     cc = [(i, j) for i in launch_ids for j in launch_ids if i != j]
@@ -147,8 +149,8 @@ def solve():
     for j in launch_ids:
         mdl.addConstr(s[j] <= float(nodes[j]["latest"]))
     mdl.setObjective(
-        gp.quicksum(tr(i, j) * x[(i, j)] for (i, j) in arcs)
-        + gp.quicksum(L * max(0.0, nodes[j]["priority"] - nodes[i]["priority"]) * x[(i, j)] for (i, j) in cc),
+        w1 * gp.quicksum(tr(i, j) * x[(i, j)] for (i, j) in arcs)
+        + w2 * gp.quicksum(L * max(0.0, nodes[j]["priority"] - nodes[i]["priority"]) * x[(i, j)] for (i, j) in cc),
         GRB.MINIMIZE,
     )
     mdl.optimize()

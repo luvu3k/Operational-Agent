@@ -3,9 +3,9 @@
 - MDVRPTW-P 的共享几何与目标评估逻辑，是精确解与启发式解的“唯一真相来源”。
 - 通用化实例结构：depots / launch_points / params，可承载论文算例或用户自定义算例。
 
-目标口径（与 experiments/mdvrptw 验证一致）：
-- 目标 = 总航行时间 + 优先级违反惩罚。
-- 总航行时间 = 所有补给舰航行总距离 / v1。
+目标口径（与 experiments/mdvrptw 验证一致，可选加权系数与 main.pdf 式(21) 对齐）：
+- 目标 = w1 · 总航行时间 + w2 · 优先级违反惩罚（默认 w1=w2=1.0；论文算例取 w1=0.8, w2=0.2）。
+- 总航行时间 = 所有补给舰航行总距离 / v1（闭合路线，补给舰服务完毕返回保障中心）。
 - 优先级惩罚 = L · Σ_{同路径相邻起飞点 i->j} max(0, τ_j − τ_i)。
 - 时间窗为硬约束：到达起飞点时刻 ≤ latest；每节点服务时长 service。
 """
@@ -54,6 +54,8 @@ def evaluate_solution(instance: Dict[str, Any], routes: List[Dict[str, Any]]) ->
     v1 = float(params["v1"])
     service = float(params["service_time"])
     penalty_l = float(params["priority_penalty_L"])
+    w1 = float(params.get("w1", 1.0))   # 总航行时间权重（论文算例取 0.8）
+    w2 = float(params.get("w2", 1.0))   # 优先级惩罚权重（论文算例取 0.2）
 
     total_distance = 0.0
     priority_penalty = 0.0
@@ -89,13 +91,17 @@ def evaluate_solution(instance: Dict[str, Any], routes: List[Dict[str, Any]]) ->
     travel_time = total_distance / v1
     served_ok = sorted(visited) == launch_ids and len(visited) == len(set(visited))
     feasible = served_ok and tw_violation <= 1e-6
-    objective = travel_time + priority_penalty
+    objective = w1 * travel_time + w2 * priority_penalty
 
     return {
         "objective": objective,
         "travel_time": travel_time,
         "total_distance": total_distance,
         "priority_penalty": priority_penalty,
+        "weighted_travel": w1 * travel_time,
+        "weighted_penalty": w2 * priority_penalty,
+        "w1": w1,
+        "w2": w2,
         "tw_violation": tw_violation,
         "feasible": feasible,
         "served_all": served_ok,

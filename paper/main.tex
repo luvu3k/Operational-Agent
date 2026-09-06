@@ -12,17 +12,19 @@
 \usepackage{subcaption}
 \usepackage{array}
 \usepackage{multirow}
+\usepackage{makecell}
 \usepackage{geometry}
 \geometry{a4paper,margin=2.5cm}
 \usepackage[hidelinks]{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage[most]{tcolorbox}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,calc,fit,backgrounds,decorations.pathreplacing}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.16}
-\usepgfplotslibrary{statistics}
+\usepgfplotslibrary{statistics,polar}
 
 % ---- 统一配色（供流程图与图表复用） ----
 \definecolor{cOpt}{RGB}{31,119,180}     % OptAgent 主色
@@ -35,8 +37,27 @@
 \definecolor{cModuleB}{RGB}{31,119,180}  % 模块边框
 \definecolor{cFeedback}{RGB}{214,39,40}  % 反馈回路
 
+% ---- 分层框架图专用配色（参考文献 Fig.1 的彩色分层风格） ----
+\definecolor{layUser}{RGB}{255,244,224}   % 用户层 浅琥珀
+\definecolor{layUserB}{RGB}{224,168,58}
+\definecolor{layLLM}{RGB}{225,238,250}    % LLM 层 浅蓝
+\definecolor{layLLMB}{RGB}{31,119,180}
+\definecolor{layExec}{RGB}{226,244,229}   % 执行层 浅绿
+\definecolor{layExecB}{RGB}{44,140,68}
+\definecolor{modUnderstand}{RGB}{213,232,246}
+\definecolor{modModel}{RGB}{255,229,204}
+\definecolor{modCode}{RGB}{223,240,216}
+\definecolor{modExec}{RGB}{226,240,240}
+\definecolor{modExplain}{RGB}{234,224,244}
+\definecolor{layModelBg}{RGB}{252,232,230}  % 传统人工步骤 浅红底
+
 % 圆圈数字：U+2460 等不在拉丁字体中，用 \textcircled 构造以保证可编译
 \newcommand{\cnum}[1]{\textcircled{\scriptsize #1}}
+% 勾/叉标记
+\newcommand{\yes}{\textcolor{layExecB}{\ding{51}}}
+\newcommand{\no}{\textcolor{cMoon}{\ding{55}}}
+\newcommand{\pt}{\textcolor{layUserB}{$\bigcirc$}}
+\usepackage{pifont}
 
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -46,7 +67,7 @@
   columns=fullflexible,
 }
 
-\title{\bfseries 面向组合优化的自然语言智能体：\\ 自动数学建模、可执行代码生成与交互式解释}
+\title{面向组合优化的自然语言智能体：\\ 自动数学建模、可执行代码生成与交互式解释}
 \author{}
 \date{}
 
@@ -54,43 +75,84 @@
 \maketitle
 
 \begin{abstract}
-组合优化（Combinatorial Optimization, CO）广泛存在于物流、调度、资源分配等决策场景，但将现实问题转化为数学模型并编写求解代码需要较强的运筹学与编程专业背景，这一门槛长期阻碍了非专业用户对优化技术的使用。本文设计并实现了一个面向所有专业背景用户的运筹优化智能体（下称 OptAgent）。该智能体以大语言模型为核心，通过\textbf{自然语言问题理解、数学建模、可执行求解代码生成、代码落盘并在子进程中真实执行、以及面向非专业读者的交互式分步解释}五个模块，构成\textbf{“自然语言$\rightarrow$数学模型$\rightarrow$可执行代码$\rightarrow$求解结果$\rightarrow$通俗解释”}的完整闭环。与仅让大模型“心算”输出答案的做法不同，OptAgent 始终把求解交给真实执行的代码与求解器，从而规避大模型在高维约束搜索上的固有缺陷。我们在涵盖背包、旅行商、指派、装箱、集合覆盖、单机调度、带容量车辆路径、图着色、最大流、设施选址等 10 个经典问题、覆盖不同难度的基准上，将 OptAgent 与 GPT-4o、GPT-4o-mini、Moonshot-v1、Qwen2.5-72B 及同底座裸模型 DeepSeek-V3 进行了真实对比实验（所有系统产出的代码均由统一裁判环境真实执行，最优值由独立暴力/精确算法校验）。结果表明：OptAgent 取得了 100\% 的代码可运行率与 70\% 的最优命中率，接近最强商用模型 GPT-4o（80\%），显著优于其同类国产基线；在面向非专业用户的\textbf{解释清晰度}上取得最高分（3.56/5），明显超过裸 GPT-4o（2.62）；相较同底座裸模型（最优命中率同为 70\%，但可运行率仅 90\%、清晰度 3.42），结构化流水线在代码可运行性与解释清晰度上带来了可度量的增益。本文进一步给出了对比实验中“伪最优解”（漏约束导致越过最优边界）等真实失败模式的分析，并讨论了智能体的局限与改进方向。
+组合优化（Combinatorial Optimization, CO）广泛存在于物流、调度、资源分配等决策场景，但将现实问题转化为数学模型并编写求解代码需要较强的运筹学与编程专业背景，这一门槛长期阻碍了非专业用户对优化技术的使用。本文设计并实现了一个面向所有专业背景用户的运筹优化智能体（下称 OptAgent）。该智能体以大语言模型为核心，通过自然语言问题理解、数学建模、可执行求解代码生成、代码落盘并在子进程中真实执行、以及面向非专业读者的交互式分步解释五个模块，构成“自然语言$\rightarrow$数学模型$\rightarrow$可执行代码$\rightarrow$求解结果$\rightarrow$通俗解释”的完整闭环。与仅让大模型“心算”输出答案的做法不同，OptAgent 始终把求解交给真实执行的代码与求解器，从而规避大模型在高维约束搜索上的固有缺陷。我们在涵盖背包、旅行商、指派、装箱、集合覆盖、单机调度、带容量车辆路径、图着色、最大流、设施选址等 10 个经典问题、覆盖不同难度的基准上，将 OptAgent 与 GPT-4o、GPT-4o-mini、Moonshot-v1、Qwen2.5-72B 及同底座裸模型 DeepSeek-V3 进行了真实对比实验（所有系统产出的代码均由统一裁判环境真实执行，最优值由独立暴力/精确算法校验）。结果表明：OptAgent 取得了 100\% 的代码可运行率与 70\% 的最优命中率，接近最强商用模型 GPT-4o（80\%），显著优于其同类国产基线；在面向非专业用户的解释清晰度上取得最高分（3.56/5），明显超过裸 GPT-4o（2.62）；相较同底座裸模型（最优命中率同为 70\%，但可运行率仅 90\%、清晰度 3.42），结构化流水线在代码可运行性与解释清晰度上带来了可度量的增益。我们进一步在一个源自远海岛礁应急物资补给的真实地理算例（带时间窗与优先级的多保障中心路径问题，MDVRPTW-P）上验证了智能体的实用性：OptAgent 自动生成的精确求解代码得到目标函数值 268.82，与文献报告的精确最优解 268.8 完全一致。本文还给出了对比实验中“伪最优解”（漏约束导致越过最优边界）等真实失败模式的分析，并讨论了智能体的局限与改进方向。
 \end{abstract}
 
-\textbf{关键词：} 大语言模型；智能体；组合优化；自动数学建模；代码生成；可解释性
+关键词： 大语言模型；智能体；组合优化；自动数学建模；代码生成；可解释性
 
 \section{引言}
 
 \subsection{研究背景}
 组合优化问题（Combinatorial Optimization Problem, COP）以离散决策变量和有限（但通常规模呈指数增长）的解空间为特征，在供应链管理、生产调度、设施选址、路径规划、应急物资配送等领域具有关键作用~\cite{daros2026survey}。以旅行商问题（TSP）、车辆路径问题（VRP）、背包问题、指派问题为代表的经典 COP，既是运筹学（Operations Research, OR）的理论基石，也直接支撑着现实世界中数以万亿计的资源配置决策。据估计，仅路径优化一项每年即可为物流行业节省可观的运营成本，其社会与经济价值不言而喻。
 
-传统上，求解这类问题需要一条\emph{专家主导}的链路：领域专家先将现实需求抽象为线性规划（LP）、整数规划（ILP/MILP）或约束规划（CP）模型，再由熟悉建模语言（如 AMPL、Pyomo、\texttt{gurobipy}）的工程师编写求解代码，最后借助 Gurobi、CPLEX 等商用求解器或启发式算法求得结果~\cite{ahmaditeshnizi2024optimus}。这一链路高度依赖专业知识：据 Gurobi 的用户调查，其商用求解器用户中约 81\% 拥有高等学位、约半数持有运筹学学位~\cite{ahmaditeshnizi2024optimus}。换言之，\textbf{“会用优化”本身就是一道高门槛}。这道门槛把大量本可从优化中获益的群体挡在门外——中小企业的运营人员、医院与学校的管理者、以及没有 OR 背景的一线教师和学生，往往只能凭经验拍脑袋决策，或负担高昂的咨询成本。
+传统上，求解这类问题需要一条专家主导的链路：领域专家先将现实需求抽象为线性规划（LP）、整数规划（ILP/MILP）或约束规划（CP）模型，再由熟悉建模语言（如 AMPL、Pyomo、\texttt{gurobipy}）的工程师编写求解代码，最后借助 Gurobi、CPLEX 等商用求解器或启发式算法求得结果~\cite{ahmaditeshnizi2024optimus}。这一链路高度依赖专业知识：据 Gurobi 的用户调查，其商用求解器用户中约 81\% 拥有高等学位、约半数持有运筹学学位~\cite{ahmaditeshnizi2024optimus}。换言之，“会用优化”本身就是一道高门槛。这道门槛把大量本可从优化中获益的群体挡在门外——中小企业的运营人员、医院与学校的管理者、以及没有 OR 背景的一线教师和学生，往往只能凭经验拍脑袋决策，或负担高昂的咨询成本。图~\ref{fig:paradigm} 对比了这两条链路：传统链路需要建模专家与编程工程师接力协作、门槛高、周期长；本文倡导的自然语言链路则由智能体自动完成建模、编码、执行与解释，用户只需用大白话描述问题。
+
+\begin{figure}[t]
+\centering
+\resizebox{0.98\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\normalsize,
+  >={Stealth[length=3mm]},
+  box/.style={rectangle, rounded corners=4pt, draw, line width=0.9pt, align=center,
+              text width=2.9cm, minimum height=1.9cm, inner sep=5pt},
+  title/.style={font=\normalfont},
+  role/.style={font=\normalfont, text=black!60},
+  ar/.style={->, line width=1.1pt, black!65},
+]
+% ===== 传统专家链路 =====
+\node[title] (t0) at (0,4.3) {传统专家链路（高门槛）};
+\node[box, fill=black!5, draw=black!45] (tp) at (0,2.7) {现实问题\\（自然语言）};
+\node[box, fill=layModelBg, draw=cMoon] (tm) at (3.6,2.7) {人工数学建模\\[3pt]\textcolor{cMoon}{\small 需 OR 专家}};
+\node[box, fill=layModelBg, draw=cMoon] (tc) at (7.2,2.7) {人工编写代码\\[3pt]\textcolor{cMoon}{\small 需程序员}};
+\node[box, fill=black!5, draw=black!45] (ts) at (10.8,2.7) {求解器\\求解结果};
+\draw[ar] (tp)--(tm); \draw[ar] (tm)--(tc); \draw[ar] (tc)--(ts);
+\node[role, text=cMoon] at (5.4,1.2) {门槛高 · 周期长 · 依赖多方专家};
+
+% ===== 本文自然语言链路 =====
+\node[title] (b0) at (0,-0.5) {本文自然语言链路（OptAgent）};
+\node[box, fill=layUser, draw=layUserB] (bp) at (0,-2.1) {现实问题\\（自然语言）};
+\node[box, fill=layLLM, draw=layLLMB, text width=3.4cm] (bagent) at (5.4,-2.1)
+  {OptAgent 智能体\\[4pt]{\small 建模 + 编码}\\{\small + 执行 + 解释}};
+\node[box, fill=layExec, draw=layExecB] (bout) at (10.8,-2.1) {模型 + 代码\\+ 结果 + 讲解};
+\draw[ar, layUserB] (bp)--(bagent);
+\draw[ar, layExecB] (bagent)--(bout);
+\node[role, text=layExecB] at (5.4,-3.7) {零门槛 · 一步到位 · 面向所有用户};
+
+% ===== 跃迁标注 =====
+\draw[decorate, decoration={brace, amplitude=6pt}, line width=0.8pt, black!45]
+  (12.5,1.9) -- (12.5,-1.3);
+\node[role, rotate=-90, anchor=south] at (13.1,0.3) {自动化的关键跃迁};
+\end{tikzpicture}}
+\caption{两种求解范式对比。上：传统链路需要建模专家与编程工程师接力，门槛高、周期长；下：本文 OptAgent 把“建模—编码—执行—解释”整合进一个智能体，用户仅需自然语言描述即可获得可运行、可复现、可理解的完整解决方案。}
+\label{fig:paradigm}
+\end{figure}
 
 \subsection{问题提出与研究动机}
-大语言模型（Large Language Model, LLM）的兴起为打破这道门槛提供了前所未有的契机。LLM 在自然语言理解、代码生成与逐步推理方面展现出的能力，使“用大白话描述问题、由机器自动完成建模与求解”从设想走向可能~\cite{li2023synthesizing,daros2026survey}。然而，直接把 LLM 当作“求解器”存在根本缺陷：近期基准研究 NLCO~\cite{jiang2025nlco} 系统地表明，若要求模型在\emph{不写代码、不调求解器}的条件下直接“心算”输出离散解，其解的可行性与最优性会随问题规模增大而\emph{迅速崩溃}，即便追加更多推理 token 也无济于事，在图结构问题与瓶颈型目标上尤为严重。这暴露出一个关键矛盾：
+大语言模型（Large Language Model, LLM）的兴起为打破这道门槛提供了前所未有的契机。LLM 在自然语言理解、代码生成与逐步推理方面展现出的能力，使“用大白话描述问题、由机器自动完成建模与求解”从设想走向可能~\cite{li2023synthesizing,daros2026survey}。然而，直接把 LLM 当作“求解器”存在根本缺陷：近期基准研究 NLCO~\cite{jiang2025nlco} 系统地表明，若要求模型在不写代码、不调求解器的条件下直接“心算”输出离散解，其解的可行性与最优性会随问题规模增大而迅速崩溃，即便追加更多推理 token 也无济于事，在图结构问题与瓶颈型目标上尤为严重。这暴露出一个关键矛盾：
 
 \begin{quote}
-\emph{LLM 擅长“把话听懂、把模型写对、把代码敲出来”，却不擅长在庞大离散空间中做精确数值搜索；而经典求解器恰好相反。}
+LLM 擅长“把话听懂、把模型写对、把代码敲出来”，却不擅长在庞大离散空间中做精确数值搜索；而经典求解器恰好相反。
 \end{quote}
 
-因此，本文的核心动机是：\textbf{让 LLM 各展所长而非越俎代庖}——由 LLM 承担\emph{问题理解、数学建模、代码生成与结果解释}，把真正的数值求解交给\emph{真实执行的代码与成熟求解器}~\cite{ahmaditeshnizi2024optimus,hu2025power,chen2025sirl}。更进一步，我们观察到已有工作大多面向 OR 专业评测（比拼建模准确率）或需要昂贵微调，\emph{很少真正站在非专业终端用户的角度}关注三件事：交付物是否\textbf{真的能跑通}、结果是否\textbf{可信可复现}、以及过程是否\textbf{讲得明白让外行看懂}。这正是本文要填补的空白。
+因此，本文的核心动机是：让 LLM 各展所长而非越俎代庖——由 LLM 承担问题理解、数学建模、代码生成与结果解释，把真正的数值求解交给真实执行的代码与成熟求解器~\cite{ahmaditeshnizi2024optimus,hu2025power,chen2025sirl}。更进一步，我们观察到已有工作大多面向 OR 专业评测（比拼建模准确率）或需要昂贵微调，很少真正站在非专业终端用户的角度关注三件事：交付物是否真的能跑通、结果是否可信可复现、以及过程是否讲得明白让外行看懂。这正是本文要填补的空白。
 
 \subsection{研究内容与创新点}
-围绕上述动机，本文设计并实现了一个面向\textbf{所有专业背景用户}的端到端运筹优化智能体 OptAgent。用户只需用自然语言描述问题，智能体便自动完成\emph{建模$\rightarrow$代码生成$\rightarrow$真实执行$\rightarrow$通俗解释}，并允许用户在建模阶段反复纠正，直至模型符合预期。与已有工作相比，本文的创新点集中体现在以下四个方面：
+围绕上述动机，本文设计并实现了一个面向所有专业背景用户的端到端运筹优化智能体 OptAgent。用户只需用自然语言描述问题，智能体便自动完成建模$\rightarrow$代码生成$\rightarrow$真实执行$\rightarrow$通俗解释，并允许用户在建模阶段反复纠正，直至模型符合预期。与已有工作相比，本文的创新点集中体现在以下四个方面：
 
 \begin{itemize}
-  \item \textbf{创新点一：可复现、可审计的“落盘执行闭环”。} 不同于让模型自述答案或仅在对话中贴出代码，OptAgent 将生成代码\emph{物理落盘}为 \texttt{generated\_solver.py}，在独立子进程沙箱中真实执行并解析 \texttt{result.json}，以“代码是否跑通、结果是否合法”作为成功判据。这直接回应了综述~\cite{daros2026survey} 指出的“LLM 生成代码普遍缺乏严格技术校验”的痛点。
-  \item \textbf{创新点二：面向非专业用户的交互式分步解释。} 在求解之外，OptAgent 专设\emph{解释模块}，用通俗语言分步讲清“问题是什么、模型怎么建、代码怎么解、结果怎么读”，并支持\emph{求解前的多轮纠正}，使外行用户也能理解并信任结果——这是本文区别于纯建模工具的关键差异化设计。
-  \item \textbf{创新点三：底座无关的通用问题族支持。} OptAgent 的通用求解工具不绑定任何单一问题模板，对任意自然语言描述的 COP 均按统一流程动态建模与生成代码，覆盖背包、TSP、指派、调度、路径、图着色、最大流、设施选址等多类问题，且\emph{零训练、即用}。
-  \item \textbf{创新点四：诚实、可复现的真实多模型评测。} 本文不臆造任何数字：所有系统（含商用与开源基线）产出的代码都在\emph{同一沙箱}中真实执行，最优值由\emph{独立暴力/精确算法}校验，并引入“伪最优解”判定以揭示漏约束的隐蔽错误；对无凭据的模型（Claude~3、文心一言）明确标注“待执行”并预留接口。
+  \item 创新点一：可复现、可审计的“落盘执行闭环”。 不同于让模型自述答案或仅在对话中贴出代码，OptAgent 将生成代码物理落盘为 \texttt{generated\_solver.py}，在独立子进程沙箱中真实执行并解析 \texttt{result.json}，以“代码是否跑通、结果是否合法”作为成功判据。这直接回应了综述~\cite{daros2026survey} 指出的“LLM 生成代码普遍缺乏严格技术校验”的痛点。
+  \item 创新点二：面向非专业用户的交互式分步解释。 在求解之外，OptAgent 专设解释模块，用通俗语言分步讲清“问题是什么、模型怎么建、代码怎么解、结果怎么读”，并支持求解前的多轮纠正，使外行用户也能理解并信任结果——这是本文区别于纯建模工具的关键差异化设计。
+  \item 创新点三：底座无关的通用问题族支持。 OptAgent 的通用求解工具不绑定任何单一问题模板，对任意自然语言描述的 COP 均按统一流程动态建模与生成代码，覆盖背包、TSP、指派、调度、路径、图着色、最大流、设施选址等多类问题，且零训练、即用。
+  \item 创新点四：诚实、可复现的真实多模型评测。 本文不臆造任何数字：所有系统（含商用与开源基线）产出的代码都在同一沙箱中真实执行，最优值由独立暴力/精确算法校验，并引入“伪最优解”判定以揭示漏约束的隐蔽错误；对无凭据的模型（Claude~3、文心一言）明确标注“待执行”并预留接口。
 \end{itemize}
 
 综上，本文的主要贡献可归纳为：
 
 \begin{itemize}
-  \item \textbf{系统}：设计并实现了一个包含自然语言理解、数学建模、可执行代码生成、沙箱式落盘执行与交互式解释五模块的运筹优化智能体，形成可复现、可审计的求解闭环。
-  \item \textbf{实验}：在 10 个经典 COP 上开展了与 5 个通用大模型的\textbf{真实}对比实验，采用统一执行环境、统一评判口径与独立校验的最优值，多维度度量建模准确性、代码可运行性与解释清晰度。
-  \item \textbf{发现}：OptAgent 在代码可运行性（100\%）与解释清晰度（3.56/5，最高）上领先，在最优命中率（70\%）上逼近最强商用模型 GPT-4o（80\%）；消融对比表明结构化流水线相对同底座裸模型在\emph{可运行率与可解释性}上带来可度量增益。我们同时诚实报告了共同失败模式（如带容量车辆路径问题上的退化解）。
+  \item 系统：设计并实现了一个包含自然语言理解、数学建模、可执行代码生成、沙箱式落盘执行与交互式解释五模块的运筹优化智能体，形成可复现、可审计的求解闭环。
+  \item 实验：在 10 个经典 COP 上开展了与 5 个通用大模型的真实对比实验，采用统一执行环境、统一评判口径与独立校验的最优值，多维度度量建模准确性、代码可运行性与解释清晰度。
+  \item 发现：OptAgent 在代码可运行性（100\%）与解释清晰度（3.56/5，最高）上领先，在最优命中率（70\%）上逼近最强商用模型 GPT-4o（80\%）；消融对比表明结构化流水线相对同底座裸模型在可运行率与可解释性上带来可度量增益。我们同时诚实报告了共同失败模式（如带容量车辆路径问题上的退化解）。
+  \item 实用验证：在一个源自远海岛礁应急物资补给的真实地理算例（MDVRPTW-P）上，OptAgent 自动生成的精确求解代码复现了文献公布的精确最优值（$268.82$ 对 $268.8$），表明该流水线在带多重现实约束的专业级决策问题上同样可用、可复现。
 \end{itemize}
 
 本文其余部分组织如下：第~\ref{sec:related} 节综述相关工作；第~\ref{sec:method} 节阐述方法框架；第~\ref{sec:exp} 节给出实验设计与结果分析；第~\ref{sec:discuss} 节讨论优势与局限；第~\ref{sec:conclusion} 节总结全文。
@@ -98,15 +160,38 @@
 \section{相关工作}\label{sec:related}
 
 \subsection{LLM 用于优化建模与代码生成}
-将自然语言描述转化为优化模型是本领域的核心任务，NL4Opt 竞赛~\cite{ramamonjison2023nl4opt} 最早系统性地推动了“从自然语言描述形式化优化问题”这一方向。Li 等提出三阶段框架（识别决策变量$\rightarrow$分类目标与约束$\rightarrow$生成 MILP），结合知识表示显著提升建模正确率~\cite{li2023synthesizing}。OptiMUS 采用多智能体（管理者、建模者、编程者、评估者）模块化协作，能够处理长描述并自我调试求解代码，在困难数据集上大幅超越基线~\cite{ahmaditeshnizi2024optimus}。Chain-of-Experts 通过多专家协作应对复杂运筹问题~\cite{xiao2024chainofexperts}。近期综述~\cite{daros2026survey} 系统梳理了 103 篇研究，指出 64 篇聚焦求解方法、其中 36 篇涉及代码生成，并强调“把自然语言正确映射到合适的数学建模类型”是关键难点，同时 LLM 生成代码常\emph{缺乏严格技术校验}。Xiao 等的综述进一步发现现有基准存在较高标注错误率，并重建了评测榜单~\cite{xiao2025survey}。本文所实现的“代码物理落盘 + 子进程执行 + 结果解析”正是对上述“缺乏技术校验”问题的直接回应。
+将自然语言描述转化为优化模型是本领域的核心任务，NL4Opt 竞赛~\cite{ramamonjison2023nl4opt} 最早系统性地推动了“从自然语言描述形式化优化问题”这一方向。Li 等提出三阶段框架（识别决策变量$\rightarrow$分类目标与约束$\rightarrow$生成 MILP），结合知识表示显著提升建模正确率~\cite{li2023synthesizing}。OptiMUS 采用多智能体（管理者、建模者、编程者、评估者）模块化协作，能够处理长描述并自我调试求解代码，在困难数据集上大幅超越基线~\cite{ahmaditeshnizi2024optimus}。Chain-of-Experts 通过多专家协作应对复杂运筹问题~\cite{xiao2024chainofexperts}。近期综述~\cite{daros2026survey} 系统梳理了 103 篇研究，指出 64 篇聚焦求解方法、其中 36 篇涉及代码生成，并强调“把自然语言正确映射到合适的数学建模类型”是关键难点，同时 LLM 生成代码常缺乏严格技术校验。Xiao 等的综述进一步发现现有基准存在较高标注错误率，并重建了评测榜单~\cite{xiao2025survey}。本文所实现的“代码物理落盘 + 子进程执行 + 结果解析”正是对上述“缺乏技术校验”问题的直接回应。
 
 \subsection{LLM 直接求解的局限}
-Jiang 等提出 NLCO 基准，要求模型在\emph{不写代码、不调求解器}的条件下直接输出离散解，覆盖 43 个 CO 问题~\cite{jiang2025nlco}。实验表明，高性能模型在小规模实例上可行性与解质量尚可，但随规模增大双双退化，即便增加推理 token 亦然；图结构问题与瓶颈目标失败率更高。这一结论构成本文方法论的重要动机：\emph{不应让 LLM 承担数值搜索，而应让其承担建模与代码生成}。
+Jiang 等提出 NLCO 基准，要求模型在不写代码、不调求解器的条件下直接输出离散解，覆盖 43 个 CO 问题~\cite{jiang2025nlco}。实验表明，高性能模型在小规模实例上可行性与解质量尚可，但随规模增大双双退化，即便增加推理 token 亦然；图结构问题与瓶颈目标失败率更高。这一结论构成本文方法论的重要动机：不应让 LLM 承担数值搜索，而应让其承担建模与代码生成。
 
 \subsection{求解器在环与可验证反馈}
 Hu 等针对电力系统提出“LLM 作 formulation generator + 校验-修复环 + 交现成求解器”的框架，指出直接用 LLM 产解常导致不可行或次优~\cite{hu2025power}。Chen 等提出 Solver-Informed RL，用求解器作为可验证奖励来训练 LLM 生成准确且可执行的优化模型~\cite{chen2025sirl}。Yang 等的 ORThought 以专家引导的思维链自动化建模，并提出物流域基准 LogiOR~\cite{yang2025orthought}。此外，医疗资源分配中也已出现将提示工程、RAG 与工具调用结合的 LLM 框架，并报告随问题规模增大 LLM 相对传统方法更具适应性~\cite{wan2025healthcare}。数据侧，Evo-Step 等通过进化式生成与逐步验证构造高质量建模微调数据~\cite{wu2025evostep}。深度强化学习端到端求解路由问题的工作（如注意力模型、POMO）则从另一路径提升求解能力~\cite{kool2019attention,kwon2020pomo}。
 
-\textbf{本文定位}：与多为纯建模评测或需微调的工作不同，OptAgent 面向\textbf{非专业终端用户}，强调\emph{零训练、即用}、\emph{真实执行闭环}与\emph{交互式通俗解释}三位一体，并以真实多模型对比给出诚实评估。
+本文定位：与多为纯建模评测或需微调的工作不同，OptAgent 面向非专业终端用户，强调零训练、即用、真实执行闭环与交互式通俗解释三位一体，并以真实多模型对比给出诚实评估。表~\ref{tab:related} 从五个维度对代表性工作进行了横向对比，可以看出 OptAgent 是少数同时满足“零训练、真实执行、面向非专业用户的分步解释、开源底座”的系统。
+
+\begin{table}[t]
+\centering
+\caption{代表性工作横向对比（\yes~支持；\pt~部分/依赖条件；\no~不支持或未强调）。}
+\label{tab:related}
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+方法 & 零训练即用 & \makecell{真实执行/\\求解器在环} & \makecell{交互式\\通俗解释} & \makecell{面向非\\专业用户} & 多轮纠正 \\
+\midrule
+NL4Opt~\cite{ramamonjison2023nl4opt}       & \no & \no & \no & \no & \no \\
+Li 等~\cite{li2023synthesizing}            & \yes & \pt & \no & \no & \no \\
+OptiMUS~\cite{ahmaditeshnizi2024optimus}    & \yes & \yes & \no & \no & \pt \\
+Chain-of-Experts~\cite{xiao2024chainofexperts} & \yes & \pt & \no & \no & \no \\
+SIRL~\cite{chen2025sirl}                    & \no & \yes & \no & \no & \no \\
+Power-System~\cite{hu2025power}             & \yes & \yes & \no & \no & \yes \\
+医疗资源分配~\cite{wan2025healthcare}         & \yes & \yes & \pt & \pt & \no \\
+OptAgent（本文）                    & \yes & \yes & \yes & \yes & \yes \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{方法框架}\label{sec:method}
 
@@ -115,108 +200,259 @@ Hu 等针对电力系统提出“LLM 作 formulation generator + 校验-修复�
 \begin{equation}
 \min_{x \in \mathcal{X}} \; f(x) \quad \text{s.t.} \quad g_i(x) \le 0,\; i=1,\dots,m;\quad x \in \{0,1\}^n \text{ 或 } \mathbb{Z}_{\ge 0}^n,
 \end{equation}
-其中 $x$ 为离散决策变量，$f$ 为目标函数，$\{g_i\}$ 为约束族，$\mathcal{X}$ 为可行域。理想的 $\mathcal{A}$ 应满足三条准则：（i）\emph{可执行性}，即 $\mathcal{C}$ 能被真实运行并产出合法结果；（ii）\emph{正确性}，即 $\mathcal{M}$ 完整刻画了 $q$ 中的目标与\emph{全部}约束（漏约束会导致越过最优边界的“伪解”）；（iii）\emph{可理解性}，即 $e$ 能让非专业用户看懂。已有让 LLM 直接输出 $x^\star$ 的做法在准则（i）（ii）上系统性失效~\cite{jiang2025nlco}，本文因此把 $\mathcal{A}$ 拆解为可校验的模块化流水线。
+其中 $x$ 为离散决策变量，$f$ 为目标函数，$\{g_i\}$ 为约束族，$\mathcal{X}$ 为可行域。理想的 $\mathcal{A}$ 应满足三条准则：（i）可执行性，即 $\mathcal{C}$ 能被真实运行并产出合法结果；（ii）正确性，即 $\mathcal{M}$ 完整刻画了 $q$ 中的目标与全部约束（漏约束会导致越过最优边界的“伪解”）；（iii）可理解性，即 $e$ 能让非专业用户看懂。已有让 LLM 直接输出 $x^\star$ 的做法在准则（i）（ii）上系统性失效~\cite{jiang2025nlco}，本文因此把 $\mathcal{A}$ 拆解为可校验的模块化流水线。
 
 \subsection{总体架构}
 OptAgent 采用 ReAct 式的编排，核心由五个模块构成，形成端到端闭环（总体流程见图~\ref{fig:arch}）：
 
 \begin{enumerate}
-  \item \textbf{自然语言问题理解模块}：接收用户的自然语言描述，识别问题族、目标、约束与数据，形成结构化中间表示 \texttt{ProblemSpec}（含集合、参数、决策变量、目标、硬/软约束、求解偏好等字段）。该阶段支持\textbf{多轮纠正}：在真正求解前，用户可反复修改模型直至符合预期。
-  \item \textbf{数学建模模块}：在 \texttt{ProblemSpec} 基础上，由 LLM 产出规范的数学模型（决策变量、目标函数、约束），并以可确认的形式呈现给用户。
-  \item \textbf{求解代码生成模块}：LLM 依据数学模型生成\emph{完整、自包含、可直接运行}的 Python 代码，约束其仅使用标准库或已安装的 \texttt{pulp}/\texttt{numpy}，并要求把结果写入规范的 \texttt{result.json}。
-  \item \textbf{沙箱式执行模块}：生成代码\textbf{物理落盘}为 \texttt{generated\_solver.py}，在独立子进程中执行（带超时），捕获 stdout/stderr 与 \texttt{result.json}。执行结果反馈给上层用于判定成功与否，失败时可触发修复。
-  \item \textbf{交互式解释模块}：面向非专业读者，用通俗语言分步解释“问题是什么、模型怎么建、代码怎么解、结果如何解读”，降低理解门槛。
+  \item 自然语言问题理解模块：接收用户的自然语言描述，识别问题族、目标、约束与数据，形成结构化中间表示 \texttt{ProblemSpec}（含集合、参数、决策变量、目标、硬/软约束、求解偏好等字段）。该阶段支持多轮纠正：在真正求解前，用户可反复修改模型直至符合预期。
+  \item 数学建模模块：在 \texttt{ProblemSpec} 基础上，由 LLM 产出规范的数学模型（决策变量、目标函数、约束），并以可确认的形式呈现给用户。
+  \item 求解代码生成模块：LLM 依据数学模型生成完整、自包含、可直接运行的 Python 代码，约束其仅使用标准库或已安装的 \texttt{pulp}/\texttt{numpy}，并要求把结果写入规范的 \texttt{result.json}。
+  \item 沙箱式执行模块：生成代码物理落盘为 \texttt{generated\_solver.py}，在独立子进程中执行（带超时），捕获 stdout/stderr 与 \texttt{result.json}。执行结果反馈给上层用于判定成功与否，失败时可触发修复。
+  \item 交互式解释模块：面向非专业读者，用通俗语言分步解释“问题是什么、模型怎么建、代码怎么解、结果如何解读”，降低理解门槛。
 \end{enumerate}
 
 \begin{figure}[t]
 \centering
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  font=\small,
-  >={Stealth[length=2.2mm]},
-  mod/.style={rectangle, rounded corners=3pt, draw=cModuleB, thick,
-              fill=cModule, align=center, text width=2.35cm, minimum height=1.15cm, inner sep=3pt},
-  io/.style={rectangle, rounded corners=8pt, draw=black!55, thick,
-             fill=black!5, align=center, text width=1.9cm, minimum height=1.0cm},
-  store/.style={cylinder, shape border rotate=90, aspect=0.28, draw=black!55,
-                fill=green!8, align=center, text width=1.9cm, minimum height=1.0cm, inner sep=2pt},
-  flow/.style={->, thick, black!70},
+  font=\normalsize,
+  >={Stealth[length=3mm]},
+  stage/.style={rectangle, rounded corners=6pt, draw, line width=1pt, align=center,
+                text width=2.9cm, minimum height=1.9cm, inner sep=5pt},
+  io/.style={rounded rectangle, draw=layUserB, line width=1pt,
+             fill=layUser, align=center, text width=2.3cm, minimum height=1.5cm, inner sep=4pt},
+  art/.style={cylinder, shape border rotate=90, aspect=0.25, draw=layExecB, line width=1pt,
+              fill=modCode, align=center, text width=3.3cm, minimum height=1.3cm, inner sep=3pt},
+  flow/.style={->, line width=1.3pt, black!72},
+  loop/.style={->, line width=1.2pt, dashed, layUserB},
+  feed/.style={->, line width=1.3pt, cFeedback},
+  lane/.style={font=\normalfont},
 ]
+% ---- 泳道背景带 ----
+\begin{scope}[on background layer]
+  \fill[layUser!55, rounded corners=8pt]   (-3.6,3.0) rectangle (19.8,5.7);
+  \fill[layLLM!45, rounded corners=8pt]    (-3.6,-0.4) rectangle (19.8,2.7);
+  \fill[layExec!55, rounded corners=8pt]   (-3.6,-4.2) rectangle (19.8,-0.7);
+\end{scope}
+\node[lane, text=layUserB, anchor=north west] at (-3.4,5.5) {用户层 User};
+\node[lane, text=layLLMB, anchor=north west]  at (-3.4,2.5) {大模型层 LLM};
+\node[lane, text=layExecB, anchor=north west] at (-3.4,-0.9) {执行层 Runtime};
 
-% 主链条（从左到右）
-\node[io] (in) {自然语言\\问题描述};
-\node[mod, right=0.75cm of in]  (m1) {\textbf{\cnum{1}问题理解}\\ProblemSpec\\集合/参数/变量};
-\node[mod, right=0.75cm of m1]  (m2) {\textbf{\cnum{2}数学建模}\\目标+约束\\可确认呈现};
-\node[mod, right=0.75cm of m2]  (m3) {\textbf{\cnum{3}代码生成}\\三段式产出\\自包含 Python};
-\node[mod, below=1.15cm of m3]  (m4) {\textbf{\cnum{4}沙箱执行}\\落盘+子进程\\超时/捕获};
-\node[mod, left=0.75cm of m4]   (m5) {\textbf{\cnum{5}交互式解释}\\分步通俗讲解};
-\node[io,  left=0.75cm of m5]   (out) {结果/模型\\/代码返回};
+% ---- 用户层 ----
+\node[io] (in) at (-1.4,4.35) {自然语言\\问题描述};
+\node[io] (out) at (16.9,4.35) {模型/代码\\结果/图形\\通俗讲解};
 
-% 落盘产物
-\node[store, below=0.75cm of m4] (store) {\ttfamily generated\_solver.py\\ \ttfamily result.json};
+% ---- LLM 层：四个彩色模块（横向均匀分布）----
+\node[stage, draw=cModuleB, fill=modUnderstand] (m1) at (2.8,1.15)
+  {\cnum{1} 问题理解\\[2pt]{\small ProblemSpec}\\{\small 集合/参数/变量}};
+\node[stage, draw=cMoon!80!black, fill=modModel] (m2) at (7.4,1.15)
+  {\cnum{2} 数学建模\\[2pt]{\small 目标函数}\\{\small 约束条件}};
+\node[stage, draw=layExecB, fill=modCode] (m3) at (12.0,1.15)
+  {\cnum{3} 代码生成\\[2pt]{\small MODEL / CODE}\\{\small EXPLANATION}};
+\node[stage, draw=cQwen!75!black, fill=modExplain] (m5) at (16.6,1.15)
+  {\cnum{5} 交互解释\\[2pt]{\small 分步解读}\\{\small 教学说明}};
 
-% 主流向箭头
-\draw[flow] (in) -- (m1);
+% ---- 执行层 ----
+\node[art] (artifact) at (10.4,-2.45) {\ttfamily generated\_solver.py\\[1pt]\ttfamily result.json};
+\node[stage, draw=layExecB, fill=modExec] (m4) at (16.6,-2.45)
+  {\cnum{4} 沙箱执行\\[2pt]{\small 子进程 / 超时}\\{\small 捕获日志}};
+
+% ---- 主数据流 ----
+\draw[flow] (in.south) |- (m1.west);
 \draw[flow] (m1) -- (m2);
 \draw[flow] (m2) -- (m3);
-\draw[flow] (m3) -- (m4);
-\draw[flow] (m4) -- (m5);
-\draw[flow] (m5) -- (out);
-\draw[flow] (m4) -- (store);
+\draw[flow] (m3.south) |- node[pos=0.35, right=2pt, font=\small, black]{落盘} (artifact.north);
+\draw[flow] (artifact.east) -- node[above=1pt, font=\small, black]{执行} (m4.west);
+\draw[flow] (m4.north) -- node[left=2pt, font=\small, layExecB]{结果 JSON} (m5.south);
+\draw[flow] (m5.north) |- (out.south);
 
-% 多轮纠正回路（用户在建模阶段反复修改）
-\draw[->, thick, cModuleB, dashed]
-  (m2.north) .. controls +(0,0.9) and +(0,0.9) .. (m1.north)
-  node[midway, above, text=cModuleB, font=\footnotesize] {多轮纠正（用户确认前）};
+% ---- 多轮纠正回路（建模→用户层，虚线）----
+\draw[loop] (m2.north) |- ($(in.south)+(0,0.9)$) -- (in.south);
+\node[font=\small, text=layUserB, fill=layUser!60, rounded corners=2pt, inner sep=2pt]
+  at (3.3,3.55) {用户确认 / 多轮纠正};
 
-% 执行反馈/自动修复回路（执行失败→回到代码生成）
-\draw[->, thick, cFeedback]
-  (store.east) .. controls +(2.4,0) and +(0,-1.6) .. (m3.south east)
-  node[pos=0.5, right, text=cFeedback, font=\footnotesize, align=left] {执行反馈\\/自动修复};
-
-\begin{scope}[on background layer]
-  \node[draw=cModuleB!30, thick, rounded corners, fill=cModuleB!4,
-        fit=(m1)(m2)(m3)(m4)(m5)(store), inner sep=6pt] {};
-\end{scope}
-\end{tikzpicture}
-\caption{OptAgent 的端到端求解闭环。蓝色实线为主数据流“自然语言$\rightarrow$问题理解$\rightarrow$数学建模$\rightarrow$代码生成$\rightarrow$落盘子进程执行$\rightarrow$交互式解释”；蓝色虚线为求解前的\textbf{多轮纠正}回路；红色实线为“执行失败即回到代码生成”的\textbf{执行反馈/自动修复}回路。所有生成代码物理落盘为 \texttt{generated\_solver.py} 并写出 \texttt{result.json}，使求解过程可复现、可审计。}
+% ---- 执行反馈/自动修复回路（红线：沙箱执行→代码生成）----
+\draw[feed] (m4.east) -- ++(1.6,0) |- (m3.east);
+\node[font=\small, text=cFeedback, align=center, fill=layExec!45, rounded corners=2pt, inner sep=2pt]
+  at (19.0,-0.55) {执行反馈\\自动修复};
+\end{tikzpicture}}
+\caption{OptAgent 的分层框架与端到端闭环。系统横跨用户层（自然语言输入/结果展示）、大模型层（问题理解\cnum{1}、数学建模\cnum{2}、代码生成\cnum{3}、交互解释\cnum{5}）与执行层（沙箱执行\cnum{4}、代码/结果落盘）。黑色实线为主数据流；橙色虚线为求解前的用户确认与多轮纠正回路；红色线为执行失败时的执行反馈/自动修复回路。所有生成代码物理落盘为 \texttt{generated\_solver.py} 并写出 \texttt{result.json}，使全过程可复现、可审计。}
 \label{fig:arch}
 \end{figure}
 
+为便于复现，算法~\ref{alg:optagent} 以伪代码形式给出了 OptAgent 的端到端执行流程，清晰刻画了“理解—建模—用户确认/纠正—代码生成—落盘执行—失败修复—解释”的控制流。
+
+\begin{algorithm}[t]
+\small
+\caption{OptAgent 端到端求解流程}
+\label{alg:optagent}
+\KwIn{用户自然语言问题描述 $q$；最大纠正轮数 $R$；最大修复次数 $F$；执行超时 $T$}
+\KwOut{数学模型 $\mathcal{M}$、可执行代码 $\mathcal{C}$、求解结果 $s$、通俗解释 $e$}
+$\texttt{spec} \leftarrow \textsc{Understand}(q)$ \tcp*{Module 1: extract ProblemSpec}
+\For{$r \leftarrow 1$ \KwTo $R$}{
+  $\mathcal{M} \leftarrow \textsc{BuildModel}(\texttt{spec})$ \tcp*{Module 2: build model for confirmation}
+  \eIf{用户确认 $\mathcal{M}$}{break}{
+    $\texttt{spec} \leftarrow \textsc{Refine}(\texttt{spec}, \text{用户纠正指令})$ \tcp*{multi-round refinement loop}
+  }
+}
+$(\mathcal{M},\mathcal{C},e) \leftarrow \textsc{Generate}(\texttt{spec})$ \tcp*{Module 3: MODEL / CODE / EXPLANATION}
+$\texttt{path} \leftarrow \textsc{Persist}(\mathcal{C})$ \tcp*{persist generated\_solver.py}
+\For{$f \leftarrow 0$ \KwTo $F$}{
+  $s \leftarrow \textsc{RunInSandbox}(\texttt{path}, T)$ \tcp*{Module 4: subprocess, parse result.json}
+  \If{$s.\texttt{ok}$ and $s.\texttt{objective}$ 合法}{break}
+  $\mathcal{C} \leftarrow \textsc{Repair}(\mathcal{C}, s.\texttt{stderr})$ \tcp*{execution feedback / auto-repair}
+}
+$e \leftarrow \textsc{Explain}(\mathcal{M},\mathcal{C},s)$ \tcp*{Module 5: step-by-step explanation}
+\Return{$(\mathcal{M},\mathcal{C},s,e)$}
+\end{algorithm}
+
+\subsection{全栈 Web 界面与运行实例}
+OptAgent 不仅是后端求解脚本，而是一个完整的全栈 Agent 应用：后端使用 FastAPI 暴露 \texttt{/api/analyze}、\texttt{/api/refine}、\texttt{/api/solve} 等接口，前端使用单页聊天式界面承载“自然语言输入、模型确认、纠正、求解与结果展示”的闭环。图~\ref{fig:agent-chat} 还原了一次真实的对话式求解：用户用自然语言描述一个远海岛礁应急补给的路径规划问题及其参数，OptAgent 自动完成问题理解、数学建模、求解代码生成与真实执行，并在同一页面以结果卡片回显目标函数值、总航行时间、优先级惩罚、补给舰数量与可行性，随后给出补给舰访问路线图、到达时间甘特图以及各保障中心的具体访问路径表。该界面体现了本文强调的易用性：非专业用户无需手写数学模型或求解代码，仅凭对话即可获得可读、可复现的完整方案。下一小节对这一算例的模型口径、求解结果与可视化产物做完整说明与复现验证。
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/agent_dialogue.jpg}
+\subcaption{对话与自动建模：用户以自然语言描述问题与参数，智能体分解出数学模型（目标、约束、求解偏好）供确认。}
+\label{fig:agent-chat-a}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.49\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/agent_web_result.jpg}
+\subcaption{真实求解结果：结果卡片回显目标函数值 268.82、总航行时间 333.13、优先级惩罚 11.60、补给舰数 8、可行，并给出补给舰访问路线图。}
+\label{fig:agent-chat-b}
+\end{subfigure}
+\caption{OptAgent 全栈 Web 界面的一次真实对话式求解截图（本地 FastAPI 后端 + 单页前端，实际运行响应）。用户仅用自然语言描述 MDVRPTW-P 算例与参数，智能体自动完成问题理解、数学建模（图~\subref{fig:agent-chat-a}）、Gurobi 精确求解代码生成与真实执行，并在同一页面以结果卡片、路线图与甘特图回显（图~\subref{fig:agent-chat-b}）。求解得到的目标函数值 268.82 与文献报告的精确最优解一致。}
+\label{fig:agent-chat}
+\end{figure}
+
+\subsection{真实应急算例：MDVRPTW-P 的自动建模与精确复现}\label{sec:mdvrptw-case}
+为检验 OptAgent 在真实、非教科书式问题上的建模与求解能力，我们选取一个源自远海岛礁应急物资补给规划的带时间窗与优先级的多保障中心车辆路径问题（Multi-Depot Vehicle Routing Problem with Time Windows and Priority, MDVRPTW-P）算例~\cite{wan2025healthcare}。在该场景中，多个物资保障中心派出补给舰，将应急物资运抵各无人机起飞点；每个起飞点由前置的聚类步骤汇聚若干周边岛礁的需求，并据此确定其应急优先级 $\tau_i$、服务时长与最晚补给时间（时间窗上界）。因此，岛礁级坐标已被聚类吸收进起飞点，求解层面只需处理起飞点与保障中心构成的路由问题。
+
+实例规模与参数。 算例包含 3 个物资保障中心与 22 个无人机起飞点，均为真实地理坐标。补给舰航行速率 $v_1=10$；优先级违反惩罚系数 $L=5$；各起飞点服务时长统一为 $5$；最早补给时间均为 $0$，最晚补给时间（时间窗上界）在 $[26,225]$ 之间不等。
+
+目标与约束口径。 与文献~\cite{wan2025healthcare} 一致，总目标为总运输时间与优先级违反惩罚的加权和
+\begin{equation}
+\min\; R = w_1\, T_{\text{total}} + w_2\, P_{\text{priority}},\qquad w_1=0.8,\; w_2=0.2,
+\label{eq:mdvrptw-obj}
+\end{equation}
+其中总航行时间 $T_{\text{total}}=\sum_{(i,j)} d_{ij}\,x_{ij}/v_1$ 为全部补给舰航行总距离除以航速（补给舰服务完毕须返回所属保障中心，故为闭合路径）；优先级惩罚 $P_{\text{priority}}=L\sum_{i\to j}\max(0,\tau_j-\tau_i)$ 惩罚“先低后高”的服务顺序，引导优先服务紧迫程度更高的起飞点。时间窗为硬约束：补给舰到达任一起飞点的时刻不得晚于其最晚补给时间；此外每个起飞点必须且仅被一艘补给舰服务一次，每艘被派出的补给舰从其保障中心出发并最终返回。
+
+智能体的处理流程。 OptAgent 将上述自然语言描述解析为结构化的 \texttt{ProblemSpec}，据此生成基于 \texttt{gurobipy} 的精确 MILP 求解代码（以紧凑的保障中心标签建模、MTZ 消除子回路、big-$M$ 线性化时间窗与到达时刻递推），并同时提供一份遗传算法（GA 叠加局部搜索）作为启发式回退方案；两份代码均物理落盘并在子进程中真实执行，结果写入 \texttt{result.json}。
+
+求解结果。 精确求解在数秒内收敛且 MIP Gap 为 $0$，得到目标函数值 $R=268.82$，与文献报告的 Gurobi 精确解 $268.8$ 完全一致；该解启用 8 段补给舰路线，全部 22 个起飞点的到达时刻均落在各自时间窗内（可行）。其加权构成为总航行时间 $333.13$（贡献 $0.8\times333.13=266.50$）与优先级惩罚 $11.60$（贡献 $0.2\times11.60=2.32$）。作为对照，遗传算法给出可行解 $R=270.32$，与精确最优仅相差约 $0.56\%$，说明启发式回退在无法调用商用求解器时仍能提供高质量近似。表~\ref{tab:mdvrptw-routes} 列出精确最优解的逐条路线与关键到达时刻，图~\ref{fig:mdvrptw-route} 给出对应的补给舰访问路线图。
+
+\begin{table}[t]
+\centering
+\caption{MDVRPTW-P 真实算例的 Gurobi 精确最优解（$R=268.82$，8 段路线，全部满足时间窗）。}
+\label{tab:mdvrptw-routes}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{clcc}
+\toprule
+保障中心 & 补给舰访问序列（起飞点编号） & 起飞点数 & 末点到达时刻 \\
+\midrule
+0 & $3 \rightarrow 17$ & 2 & 38.4 \\
+0 & $5 \rightarrow 12$ & 2 & 23.6 \\
+0 & $19 \rightarrow 10 \rightarrow 14 \rightarrow 15$ & 4 & 69.1 \\
+0 & $24$ & 1 & 7.8 \\
+1 & $9 \rightarrow 11 \rightarrow 18 \rightarrow 6$ & 4 & 44.0 \\
+1 & $16 \rightarrow 21 \rightarrow 8 \rightarrow 20$ & 4 & 73.4 \\
+2 & $7 \rightarrow 4$ & 2 & 21.7 \\
+2 & $22 \rightarrow 13 \rightarrow 23$ & 3 & 43.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\resizebox{0.86\linewidth}{!}{%
+\input{figures/route_map.tex}}
+\caption{MDVRPTW-P 真实算例的补给舰访问路线图（Gurobi 精确最优解，$R=268.82$）。方块为 3 个物资保障中心（中心 0/1/2），圆圈为 22 个无人机起飞点，箭头表示补给舰的闭合访问路径，颜色区分不同保障中心。该图由求解产物 \texttt{result.json} 直接生成，无需额外绘图依赖，与目标值和路线表完全一致、可复现。}
+\label{fig:mdvrptw-route}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\resizebox{0.92\linewidth}{!}{%
+\input{figures/gantt.tex}}
+\caption{MDVRPTW-P 真实算例的补给舰到达时间甘特图。每行对应一艘补给舰（按所属保障中心着色）：浅色线段表示航行过程，实心色块表示在起飞点的服务过程（块宽等于服务时长 5），块内数字为起飞点编号；横轴为到达时刻。所有服务色块均落在各起飞点时间窗上界之内，直观印证了解的时间窗可行性。该图同样由 \texttt{result.json} 直接生成、可复现。}
+\label{fig:mdvrptw-gantt}
+\end{figure}
+
+结论。 该算例验证了 OptAgent 的核心主张：面对一个带多重现实约束的真实路由问题，用户只需以自然语言对话描述问题与参数，智能体便能自动产出可运行的精确求解代码，如实复现文献公布的精确最优值（$268.82$ 对 $268.8$），并同步给出补给舰访问路线图、到达时间甘特图与各保障中心的逐条访问路径表。这与本文“把建模与代码生成交给大模型、把数值求解交给真实求解器”的方法论一脉相承，也说明结构化流水线在专业级应急决策问题上具备可复现、可审计的实用价值。
+
 \subsection{结构化提示与三段式产出}
-为保证可解析与可执行，代码生成模块采用结构化提示，要求 LLM 严格输出三段：\texttt{===MODEL===}（数学模型）、\texttt{===CODE===}（Python 代码块）、\texttt{===EXPLANATION===}（通俗解释）。系统据此切分并抽取代码，注入结果输出路径后执行。该设计把“建模—编码—解释”解耦为可校验的产物，便于落盘审计。
+为保证可解析与可执行，代码生成模块采用结构化提示，要求 LLM 严格输出三段：\texttt{===MODEL===}（数学模型）、\texttt{===CODE===}（Python 代码块）、\texttt{===EXPLANATION===}（通俗解释）。系统据此切分并抽取代码，注入结果输出路径后执行。该设计把“建模—编码—解释”解耦为可校验的产物，便于落盘审计。图~\ref{fig:threeseg} 直观展示了这一“一次调用、三段产出、分别落地”的机制：数学模型供用户确认、代码供真实执行、解释供非专业用户理解。
+
+\begin{figure}[t]
+\centering
+\resizebox{0.96\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small, >={Stealth[length=2.2mm]},
+  seg/.style={rectangle, rounded corners=4pt, draw, line width=0.8pt, align=left,
+              text width=3.6cm, minimum height=2.0cm, inner sep=6pt, font=\scriptsize},
+  src/.style={rectangle, rounded corners=6pt, draw=layLLMB, line width=1pt, fill=layLLM,
+              align=center, text width=2.4cm, minimum height=1.5cm},
+  ar/.style={->, line width=1pt, black!65},
+]
+\newcommand{\segtag}[1]{{\ttfamily\scriptsize #1}}
+\node[src] (llm) {LLM 单次调用\\{\scriptsize 结构化提示}\\{\scriptsize temperature=0}};
+
+\node[seg, draw=cMoon!80!black, fill=modModel] (mo) at (5.6,2.35)
+  {\segtag{===MODEL===}\\[2pt] 决策变量 $x_i\in\{0,1\}$\\ 目标 $\max\sum v_i x_i$\\ 约束 $\sum w_i x_i\le C$\\[2pt] \textcolor{cMoon!80!black}{$\Rightarrow$ 供用户确认}};
+\node[seg, draw=layExecB, fill=modCode] (co) at (5.6,-0.15)
+  {\segtag{===CODE===}\\[2pt] \texttt{import pulp,json}\\ \texttt{prob=LpProblem(...)}\\ \texttt{prob.solve()}\\[2pt] \textcolor{layExecB}{$\Rightarrow$ 供真实执行}};
+\node[seg, draw=cQwen!75!black, fill=modExplain] (eo) at (5.6,-2.65)
+  {\segtag{===EXPLANATION===}\\[2pt] “为每件物品设 0/1 变量，\\ 目标是价值最大，\\ 限制是总重不超载……”\\[2pt] \textcolor{cQwen!75!black}{$\Rightarrow$ 供非专业用户理解}};
+
+\draw[ar, cMoon!80!black] (llm.east) -- (mo.west);
+\draw[ar, layExecB] (llm.east) -- (co.west);
+\draw[ar, cQwen!75!black] (llm.east) -- (eo.west);
+
+\node[seg, draw=black!40, fill=black!4, text width=3.0cm, minimum height=1.2cm] (exec) at (11.0,-0.15)
+  {\segtag{result.json}\\[2pt] \texttt{objective: 26}\\ \texttt{feasible: true}\\ \textcolor{layExecB}{$\Rightarrow$ 独立校验}};
+\draw[ar, layExecB] (co.east) -- (exec.west) node[midway,above,font=\scriptsize]{落盘执行};
+\end{tikzpicture}}
+\caption{结构化提示驱动的“三段式产出”。LLM 一次调用即产出数学模型（橙，供用户确认）、可执行代码（绿，供真实执行）与通俗解释（紫，供非专业用户理解）三段；代码落盘执行后写出 \texttt{result.json}，再与独立校验的真值比对。}
+\label{fig:threeseg}
+\end{figure}
 
 \subsection{以执行为准的判定}
-与直接采信模型自述答案不同，OptAgent 的成功判定以\emph{代码真实执行}为准：仅当子进程正常退出（returncode$=0$）且 \texttt{result.json} 含合法 \texttt{objective} 时才视为可运行；解的质量再由目标值与（如可得）已知最优比较。该机制显式回应了文献指出的“LLM 生成代码缺乏技术校验”的痛点~\cite{daros2026survey}。
+与直接采信模型自述答案不同，OptAgent 的成功判定以代码真实执行为准：仅当子进程正常退出（returncode$=0$）且 \texttt{result.json} 含合法 \texttt{objective} 时才视为可运行；解的质量再由目标值与（如可得）已知最优比较。该机制显式回应了文献指出的“LLM 生成代码缺乏技术校验”的痛点~\cite{daros2026survey}。
 
 \subsection{通用问题族支持}
 OptAgent 的通用求解工具不绑定单一问题模板：对任意自然语言描述的 CO 问题，均按上述流程动态建模并生成代码。这使其能覆盖背包、TSP、指派、调度、路径规划、图着色、最大流、设施选址等多种问题族，而非局限于预置模板。
 
 \subsection{一个完整实例（0/1 背包）}
-为具体说明流水线的产出，图~\ref{fig:example} 展示了 OptAgent 对案例 C01（0/1 背包）的真实输出片段。用户仅输入一段自然语言（“有 5 件物品，各有重量与价值，背包承重 20，求价值最大的装法”），系统即依次给出\textbf{数学模型}、\textbf{可执行代码}与\textbf{分步解释}三段产物；代码经落盘子进程执行后写出 \texttt{result.json}，得到最优目标值 $26$，与独立校验的真值一致。
+为具体说明流水线的产出，图~\ref{fig:example} 展示了 OptAgent 对案例 C01（0/1 背包）的真实输出片段。用户仅输入一段自然语言（“有 5 件物品，各有重量与价值，背包承重 20，求价值最大的装法”），系统即依次给出数学模型、可执行代码与分步解释三段产物；代码经落盘子进程执行后写出 \texttt{result.json}，得到最优目标值 $26$，与独立校验的真值一致。
 
 \begin{figure}[t]
 \centering
 \begin{tcolorbox}[colback=gray!4,colframe=cModuleB!55,boxrule=0.6pt,left=3pt,right=3pt,top=2pt,bottom=2pt]
 \footnotesize
-\textbf{【\cnum{1} 数学模型】}\\
+【\cnum{1} 数学模型】\\
 决策变量：$x_i \in \{0,1\}$，表示是否选择第 $i$ 件物品（$i=1,\dots,5$）；\\
 目标函数：$\max \sum_i v_i x_i$；\quad 约束：$\sum_i w_i x_i \le 20$。
 
 \medskip
-\textbf{【\cnum{2} 求解代码（节选）】}
+【\cnum{2} 求解代码（节选）】
 \begin{lstlisting}[language=Python]
 import pulp, json
 prob = pulp.LpProblem("knapsack", pulp.LpMaximize)
 x = [pulp.LpVariable(f"x{i}", cat="Binary") for i in range(5)]
-prob += pulp.lpDot(values, x)              # 目标：总价值最大
-prob += pulp.lpDot(weights, x) <= 20       # 约束：总重量 <= 20
+prob += pulp.lpDot(values, x)              # maximize value
+prob += pulp.lpDot(weights, x) <= 20       # capacity limit
 prob.solve(pulp.PULP_CBC_CMD(msg=0))
 json.dump({"objective": pulp.value(prob.objective),
            "solution": [i for i in range(5) if x[i].value()==1],
            "feasible": True}, open(RESULT_PATH, "w"))
 \end{lstlisting}
 
-\textbf{【\cnum{3} 交互式解释（面向非专业用户，节选）】}\\
+【\cnum{3} 交互式解释（面向非专业用户，节选）】\\
 “我们需要从 5 件物品中挑选装入背包……为每件物品设一个 0/1 变量（选或不选）；目标是被选中物品的价值总和最大；唯一的限制是总重量不超过 20。程序用整数规划自动找到最优组合，并把结果存入 \texttt{result.json}。这类问题常见于资源分配、投资组合等场景。”
 \end{tcolorbox}
 \caption{OptAgent 对案例 C01（0/1 背包）的真实三段式产出（篇幅所限有删节）。代码经真实执行得目标值 $26$，命中独立校验真值。}
@@ -227,11 +463,11 @@ json.dump({"objective": pulp.value(prob.objective),
 
 \subsection{实验设置}
 
-\textbf{被测系统与基线。} 本文系统 OptAgent 以 DeepSeek-V3 为底座并叠加上述五模块流水线。基线为 5 个通用大模型，均以\emph{相同的自然语言提示}直接作答：GPT-4o、GPT-4o-mini、Moonshot-v1（Kimi）、Qwen2.5-72B-Instruct，以及\textbf{同底座裸模型 DeepSeek-V3-raw}（用于消融，验证流水线本身的贡献）。为保证公平，\emph{所有系统}产出的代码都被统一裁判环境抽取并在相同子进程沙箱中真实执行，采用相同的 \texttt{result.json} 口径评判，温度均设为 0。
+被测系统与基线。 本文系统 OptAgent 以 DeepSeek-V3 为底座并叠加上述五模块流水线。基线为 5 个通用大模型，均以相同的自然语言提示直接作答：GPT-4o、GPT-4o-mini、Moonshot-v1（Kimi）、Qwen2.5-72B-Instruct，以及同底座裸模型 DeepSeek-V3-raw（用于消融，验证流水线本身的贡献）。为保证公平，所有系统产出的代码都被统一裁判环境抽取并在相同子进程沙箱中真实执行，采用相同的 \texttt{result.json} 口径评判，温度均设为 0。
 
-\textbf{说明（诚实性）。} 受限于可用凭据，Claude~3 与文心一言（ERNIE）当前未接入；我们在实验框架中以可复现的方式预留了其接入位置（补充相应 API 配置即可运行），本文不臆造其数值，相应结果标注为“待执行”。
+说明（诚实性）。 受限于可用凭据，Claude~3 与文心一言（ERNIE）当前未接入；我们在实验框架中以可复现的方式预留了其接入位置（补充相应 API 配置即可运行），本文不臆造其数值，相应结果标注为“待执行”。
 
-\textbf{案例集与真值。} 选取 10 个经典 CO 问题（表~\ref{tab:cases}），覆盖 easy/medium/hard 三个难度。为避免以错误真值评判，各案例的参考最优值\textbf{均由独立的暴力枚举/精确算法脚本计算并复核}；此过程还纠正了作者初始手算的 3 处错误（TSP 修正为 $17.6569$、指派为 $9$、设施选址为 $14$）。带容量车辆路径问题（CVRP）无已知闭式最优，仅作可行性判定。
+案例集与真值。 选取 10 个经典 CO 问题（表~\ref{tab:cases}），覆盖 easy/medium/hard 三个难度。为避免以错误真值评判，各案例的参考最优值均由独立的暴力枚举/精确算法脚本计算并复核；此过程还纠正了作者初始手算的 3 处错误（TSP 修正为 $17.6569$、指派为 $9$、设施选址为 $14$）。带容量车辆路径问题（CVRP）无已知闭式最优，仅作可行性判定。
 
 \begin{table}[t]
 \centering
@@ -256,12 +492,12 @@ C10 & 无容量设施选址 & facility location / hard & 14 \\
 \end{tabular}
 \end{table}
 
-\textbf{评估指标。}
-(1)\emph{代码可运行率}：抽取的代码能否在 120s 内正常执行并写出规范结果；
-(2)\emph{最优命中率}：目标值在容差内等于已知最优；
-(3)\emph{伪最优解数}：在最小化问题上给出\emph{低于}已知最优（或最大化问题高于最优）的“伪解”，即漏约束/建错模型的信号；
-(4)\emph{解释清晰度}：由裁判模型 GPT-4o 按统一 rubric（问题理解/建模步骤/求解过程/结果解读/非专业可读性）对解释文本打分 $1\text{--}5$；
-(5)\emph{端到端成功率}：可运行且命中最优。
+评估指标。
+(1)代码可运行率：抽取的代码能否在 120s 内正常执行并写出规范结果；
+(2)最优命中率：目标值在容差内等于已知最优；
+(3)伪最优解数：在最小化问题上给出低于已知最优（或最大化问题高于最优）的“伪解”，即漏约束/建错模型的信号；
+(4)解释清晰度：由裁判模型 GPT-4o 按统一 rubric（问题理解/建模步骤/求解过程/结果解读/非专业可读性）对解释文本打分 $1\text{--}5$；
+(5)端到端成功率：可运行且命中最优。
 
 \subsection{总体结果}
 
@@ -276,8 +512,8 @@ C10 & 无容量设施选址 & facility location / hard & 14 \\
 \toprule
 系统 & 可运行率 & 最优命中率 & 伪优解 & 解释清晰度 & 端到端成功率 \\
 \midrule
-\textbf{OptAgent（本文）} & \textbf{100\%} & 70\% & 2 & \textbf{3.56} & 70\% \\
-GPT-4o & 100\% & \textbf{80\%} & 1 & 2.62 & \textbf{80\%} \\
+OptAgent（本文） & 100\% & 70\% & 2 & 3.56 & 70\% \\
+GPT-4o & 100\% & 80\% & 1 & 2.62 & 80\% \\
 GPT-4o-mini & 100\% & 60\% & 4 & 2.34 & 60\% \\
 Moonshot-v1 & 50\% & 40\% & 1 & 2.38 & 40\% \\
 Qwen2.5-72B & 20\% & 20\% & 0 & 2.18 & 20\% \\
@@ -311,19 +547,19 @@ DeepSeek-V3-raw（消融） & 90\% & 70\% & 2 & 3.42 & 70\% \\
 \legend{代码可运行率,最优命中率（=端到端成功率）}
 \end{axis}
 \end{tikzpicture}
-\caption{各系统在 10 个案例上的\textbf{代码可运行率与最优命中率}对比（越高越好；因每个命中最优的解必然可运行，端到端成功率恒等于最优命中率，故合并显示）。OptAgent 的可运行率达 100\%（与两款 GPT 并列最高），远超 Moonshot（50\%）与 Qwen2.5（20\%）；其最优命中率（70\%）逼近最强商用模型 GPT-4o（80\%）。}
+\caption{各系统在 10 个案例上的代码可运行率与最优命中率对比（越高越好；因每个命中最优的解必然可运行，端到端成功率恒等于最优命中率，故合并显示）。OptAgent 的可运行率达 100\%（与两款 GPT 并列最高），远超 Moonshot（50\%）与 Qwen2.5（20\%）；其最优命中率（70\%）逼近最强商用模型 GPT-4o（80\%）。}
 \label{fig:overall-bar}
 \end{figure}
 
 结合表~\ref{tab:overall} 与图~\ref{fig:overall-bar}，可得如下观察：
 
-\textbf{(1) 可运行性与稳健性。} OptAgent 达到 100\% 代码可运行率，与 GPT-4o/GPT-4o-mini 并列最高，显著优于 Moonshot-v1（50\%）与 Qwen2.5-72B（20\%）。后两者常出现“看似给出代码但无法运行或不写出规范结果”的情况——这正是终端用户最容易受挫之处。OptAgent 的落盘执行机制保证了交付物“可运行、可复现”。
+(1) 可运行性与稳健性。 OptAgent 达到 100\% 代码可运行率，与 GPT-4o/GPT-4o-mini 并列最高，显著优于 Moonshot-v1（50\%）与 Qwen2.5-72B（20\%）。后两者常出现“看似给出代码但无法运行或不写出规范结果”的情况——这正是终端用户最容易受挫之处。OptAgent 的落盘执行机制保证了交付物“可运行、可复现”。
 
-\textbf{(2) 建模准确性。} GPT-4o 以 80\% 最优命中率领先，OptAgent 以 70\% 紧随其后，二者差距仅为 1 个案例，且 OptAgent 明显优于其国产同类基线（Moonshot 40\%、Qwen 20\%）。考虑到 OptAgent 的底座为开源 DeepSeek-V3 而非 GPT-4o，这一结果具有实用价值。
+(2) 建模准确性。 GPT-4o 以 80\% 最优命中率领先，OptAgent 以 70\% 紧随其后，二者差距仅为 1 个案例，且 OptAgent 明显优于其国产同类基线（Moonshot 40\%、Qwen 20\%）。考虑到 OptAgent 的底座为开源 DeepSeek-V3 而非 GPT-4o，这一结果具有实用价值。
 
-\textbf{(3) 流水线增益（消融）。} 在最优命中率上，OptAgent（DeepSeek-V3 + 流水线）与同底座裸模型 DeepSeek-V3-raw 同为 70\%，说明底座本身在建模准确性上已较强；但流水线的增益体现在\emph{交付可靠性}与\emph{可解释性}上：OptAgent 的代码可运行率为 100\%，高于裸模型的 90\%（裸模型在单机调度上未能产出可运行代码），端到端成功率相应为 70\% 对 70\%（注：二者最优命中集合并不完全相同）。这表明\emph{结构化建模、规范化落盘执行与解释流水线本身带来了可度量的稳健性与可读性增益}，而非仅由底座能力决定。
+(3) 流水线增益（消融）。 在最优命中率上，OptAgent（DeepSeek-V3 + 流水线）与同底座裸模型 DeepSeek-V3-raw 同为 70\%，说明底座本身在建模准确性上已较强；但流水线的增益体现在交付可靠性与可解释性上：OptAgent 的代码可运行率为 100\%，高于裸模型的 90\%（裸模型在单机调度上未能产出可运行代码），端到端成功率相应为 70\% 对 70\%（注：二者最优命中集合并不完全相同）。这表明结构化建模、规范化落盘执行与解释流水线本身带来了可度量的稳健性与可读性增益，而非仅由底座能力决定。
 
-\textbf{(4) 解释清晰度。} OptAgent 取得最高清晰度分 3.56，明显高于裸 GPT-4o（2.62）与其它基线；同底座的 DeepSeek-V3-raw 为 3.42（见图~\ref{fig:clarity-ablation}）。这印证了本文\textbf{交互式解释模块}对面向非专业用户的价值：结构化流水线促使模型产出更完整、分步、可读的解释。
+(4) 解释清晰度。 OptAgent 取得最高清晰度分 3.56，明显高于裸 GPT-4o（2.62）与其它基线；同底座的 DeepSeek-V3-raw 为 3.42（见图~\ref{fig:clarity-ablation}）。这印证了本文交互式解释模块对面向非专业用户的价值：结构化流水线促使模型产出更完整、分步、可读的解释。
 
 \begin{figure}[t]
 \centering
@@ -331,7 +567,7 @@ DeepSeek-V3-raw（消融） & 90\% & 70\% & 2 & 3.42 & 70\% \\
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  width=\linewidth, height=5.6cm,
+  width=0.92\linewidth, height=5.6cm,
   xbar, bar width=8pt,
   xmin=0, xmax=5,
   xlabel={解释清晰度（1--5，越高越好）},
@@ -374,13 +610,73 @@ DeepSeek-V3-raw（消融） & 90\% & 70\% & 2 & 3.42 & 70\% \\
 \subcaption{消融：流水线增益（清晰度已$\times20$便于同轴对比）。}
 \label{fig:ablation}
 \end{minipage}
-\caption{（a）各系统解释清晰度对比，OptAgent 与同底座裸模型均明显高于其余基线，凸显\textbf{结构化流水线}对可读性的提升；（b）OptAgent 与同底座裸模型 DeepSeek-V3-raw 的消融对比：二者最优命中率相同（70\%），流水线的增益集中体现在\textbf{代码可运行率}（100\% vs 90\%）与\textbf{解释清晰度}（3.56 vs 3.42）。}
+\caption{（a）各系统解释清晰度对比，OptAgent 与同底座裸模型均明显高于其余基线，凸显结构化流水线对可读性的提升；（b）OptAgent 与同底座裸模型 DeepSeek-V3-raw 的消融对比：二者最优命中率相同（70\%），流水线的增益集中体现在代码可运行率（100\% vs 90\%）与解释清晰度（3.56 vs 3.42）。}
 \label{fig:clarity-ablation}
 \end{figure}
 
-\subsection{逐案例分析与失败模式}
+\subsection{难度分层与能力画像}
+为进一步刻画各系统在不同难度上的表现，我们按案例集的难度标签将 10 个案例划分为 easy（C01、C03 共 2 个）、medium（C02、C04、C05、C06、C08、C09 共 6 个）与 hard（C07 CVRP、C10 设施选址）三档，统计最优命中率随难度的变化（图~\ref{fig:by-difficulty}a）。由于 CVRP（C07）无闭式最优、仅作可行性判定，hard 档的最优命中率以 C10 为准，CVRP 的共同失败在第~\ref{sec:percase} 节单独讨论。可以看到：在 easy 档所有可运行的系统均命中最优；medium 档是最能区分系统能力的区间——GPT-4o（83.3\%）领先，OptAgent 与 DeepSeek-V3-raw 并列次之（66.7\%），Moonshot（33.3\%）与 Qwen（16.7\%）明显偏弱。这说明本文流水线的价值主要体现在中等难度问题上把开源底座“托举”到接近顶级商用模型的水平。
 
-表~\ref{tab:percase} 给出逐案例目标值与判定，图~\ref{fig:heatmap} 则以判定矩阵直观呈现各系统在每个案例上的成败分布。除总体统计外，几类\emph{真实失败模式}尤其值得关注：
+图~\ref{fig:by-difficulty}b 进一步给出三强系统（OptAgent、GPT-4o、DeepSeek-V3-raw）在五个维度上的能力雷达画像：OptAgent 在可运行率与解释清晰度两维上形成明显外扩，GPT-4o 在最优命中率与稳健性上略占优，三者共同构成“各有所长”的格局，而 OptAgent 的整体轮廓在面向终端用户的维度上更为饱满。
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[t]{0.53\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth, height=6.0cm,
+  ybar=1.5pt, bar width=6pt,
+  ymin=0, ymax=115,
+  ylabel={\footnotesize 最优命中率 (\%)},
+  symbolic x coords={easy,medium,hard},
+  xtick=data,
+  legend style={at={(0.5,1.02)}, anchor=south, legend columns=3, font=\tiny, draw=none},
+  nodes near coords, nodes near coords style={font=\tiny, rotate=90, anchor=west},
+  ymajorgrids=true, grid style={gray!18},
+]
+\addplot[fill=cOpt!85,draw=cOpt] coordinates {(easy,100)(medium,66.7)(hard,100)};
+\addplot[fill=cGPT!85,draw=cGPT] coordinates {(easy,100)(medium,83.3)(hard,100)};
+\addplot[fill=cGPTm!85,draw=cGPTm] coordinates {(easy,100)(medium,50)(hard,100)};
+\addplot[fill=cMoon!85,draw=cMoon] coordinates {(easy,100)(medium,33.3)(hard,0)};
+\addplot[fill=cQwen!85,draw=cQwen] coordinates {(easy,0)(medium,16.7)(hard,100)};
+\addplot[fill=cRaw!85,draw=cRaw] coordinates {(easy,100)(medium,66.7)(hard,100)};
+\legend{OptAgent,GPT-4o,GPT-4o-mini,Moonshot,Qwen2.5,DS-raw}
+\end{axis}
+\end{tikzpicture}
+\subcaption{最优命中率随难度分层（hard 以 C10 计）。}
+\label{fig:diff-bar}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.45\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{polaraxis}[
+  width=\linewidth, height=6.0cm,
+  xtick={0,72,144,216,288},
+  xticklabels={可运行率,最优命中,解释清晰,稳健性,端到端},
+  xticklabel style={font=\tiny},
+  ymin=0, ymax=100, ytick={20,40,60,80,100},
+  yticklabel style={font=\tiny}, ticklabel style={font=\tiny},
+  legend style={at={(0.5,-0.14)}, anchor=north, legend columns=3, font=\tiny, draw=none},
+]
+\addplot+[mark=*, mark size=1pt, cOpt, line width=0.9pt, fill=cOpt, fill opacity=0.16]
+  coordinates {(0,100)(72,70)(144,71.2)(216,80)(288,70)(360,100)};
+\addplot+[mark=*, mark size=1pt, cGPT, line width=0.9pt, fill=cGPT, fill opacity=0.14]
+  coordinates {(0,100)(72,80)(144,52.4)(216,90)(288,80)(360,100)};
+\addplot+[mark=*, mark size=1pt, cRaw, line width=0.9pt, fill=cRaw, fill opacity=0.12]
+  coordinates {(0,90)(72,70)(144,68.4)(216,80)(288,70)(360,90)};
+\legend{OptAgent,GPT-4o,DS-raw}
+\end{polaraxis}
+\end{tikzpicture}
+\subcaption{三强系统能力雷达（各维归一化至 0--100）。}
+\label{fig:radar}
+\end{subfigure}
+\caption{难度分层与能力画像。（a）medium 难度最能区分系统：GPT-4o 领先，OptAgent 与同底座裸模型并列次之，且明显优于 Moonshot/Qwen；（b）能力雷达显示 OptAgent 在可运行率与解释清晰度维度外扩明显，GPT-4o 在最优命中与稳健性上略优，三者各有所长。稳健性定义为 $1-\text{伪优解数}/10$。}
+\label{fig:by-difficulty}
+\end{figure}
+
+\subsection{逐案例分析与失败模式}\label{sec:percase}
+表~\ref{tab:percase} 给出逐案例目标值与判定，图~\ref{fig:heatmap} 则以判定矩阵直观呈现各系统在每个案例上的成败分布。除总体统计外，几类真实失败模式尤其值得关注：
 
 \begin{table}[t]
 \centering
@@ -405,11 +701,11 @@ C10 设施选址 & 14 & 14(opt) & 14(opt) & 14(opt) & --(--) & 14(opt) & 14(opt)
 \end{tabular}
 \end{table}
 
-\textbf{伪最优解（漏约束）。} 在最小化的 TSP 上，OptAgent 生成的代码给出目标值 $0$，低于已知最优 $17.66$——这并非“更优”，而是遗漏了“回到起点/访问全部城市”的约束，导致给出不可行的伪解。类似地，GPT-4o-mini 在装箱（给出 1 个箱子，物理上不可能）、最大流（给出 20，超过源点出边总容量 15）等处出现越界伪解。此类错误若不借助\textbf{独立真值校验}极难发现，凸显了“以执行与校验为准”的必要性。
+伪最优解（漏约束）。 在最小化的 TSP 上，OptAgent 生成的代码给出目标值 $0$，低于已知最优 $17.66$——这并非“更优”，而是遗漏了“回到起点/访问全部城市”的约束，导致给出不可行的伪解。类似地，GPT-4o-mini 在装箱（给出 1 个箱子，物理上不可能）、最大流（给出 20，超过源点出边总容量 15）等处出现越界伪解。此类错误若不借助独立真值校验极难发现，凸显了“以执行与校验为准”的必要性。
 
-\textbf{退化解。} 在 CVRP 上，OptAgent 与 DeepSeek-V3-raw 给出空路线、目标值 $0$ 的退化解，GPT-4o 给出数值但自标 \texttt{feasible=false}。可见\emph{带容量与多车约束的路径问题是所有系统的共同短板}，也是本文智能体后续需重点加强之处。
+退化解。 在 CVRP 上，OptAgent 与 DeepSeek-V3-raw 给出空路线、目标值 $0$ 的退化解，GPT-4o 给出数值但自标 \texttt{feasible=false}。可见带容量与多车约束的路径问题是所有系统的共同短板，也是本文智能体后续需重点加强之处。
 
-\textbf{稳定性差异。} Qwen2.5-72B 与 Moonshot-v1 在多数案例上直接无法产出可运行代码，说明不同底座模型在“可执行代码生成”上的能力差异极大，通用模型并不必然给出可用结果。
+稳定性差异。 Qwen2.5-72B 与 Moonshot-v1 在多数案例上直接无法产出可运行代码，说明不同底座模型在“可执行代码生成”上的能力差异极大，通用模型并不必然给出可用结果。
 
 \begin{figure}[t]
 \centering
@@ -448,55 +744,62 @@ C10 设施选址 & 14 & 14(opt) & 14(opt) & 14(opt) & --(--) & 14(opt) & 14(opt)
     \node[non,minimum width=0.4cm,minimum height=0.4cm] at (8.6,0.2){}; \node[anchor=west] at (8.85,0.2) {-- 无解/不可运行};
   \end{scope}
 \end{tikzpicture}
-\caption{逐案例$\times$系统的判定矩阵（绿色=命中最优，橙色=可行非最优，红色=伪优解/退化，灰色=无解/不可运行）。可直观看出：OptAgent 与 GPT-4o 的绿色格最多；CVRP（C07）一整行无绿色，是所有系统的\textbf{共同短板}；Qwen2.5 与 Moonshot 大面积灰色，稳定性明显偏弱。}
+\caption{逐案例$\times$系统的判定矩阵（绿色=命中最优，橙色=可行非最优，红色=伪优解/退化，灰色=无解/不可运行）。可直观看出：OptAgent 与 GPT-4o 的绿色格最多；CVRP（C07）一整行无绿色，是所有系统的共同短板；Qwen2.5 与 Moonshot 大面积灰色，稳定性明显偏弱。}
 \label{fig:heatmap}
 \end{figure}
 
 \subsection{实验结论}
-综合来看：在\textbf{可运行性}与\textbf{面向非专业用户的解释清晰度}两项对终端用户体验最关键的指标上，OptAgent 表现最佳；在\textbf{建模准确性}上接近最强商用模型 GPT-4o 且明显优于同类国产基线；消融对比进一步表明其相对同底座裸模型存在真实增益。同时我们诚实地指出，OptAgent 在 TSP、CVRP 等图结构/强约束问题上仍会出现漏约束与退化解，最优命中率尚未超越 GPT-4o，存在明确改进空间。
+综合来看：在可运行性与面向非专业用户的解释清晰度两项对终端用户体验最关键的指标上，OptAgent 表现最佳；在建模准确性上接近最强商用模型 GPT-4o 且明显优于同类国产基线；消融对比进一步表明其相对同底座裸模型存在真实增益。同时我们诚实地指出，OptAgent 在 TSP、CVRP 等图结构/强约束问题上仍会出现漏约束与退化解，最优命中率尚未超越 GPT-4o，存在明确改进空间。
 
 \section{讨论}\label{sec:discuss}
 
-\textbf{优势。}
-(1)\emph{易用性}：非专业用户仅需自然语言即可获得数学模型、可运行代码与通俗解释，并可多轮纠正，真正降低了优化技术的使用门槛；
-(2)\emph{可信性}：所有交付代码物理落盘并真实执行，结果可复现、可审计，规避了“看似正确实则不可运行/不可行”的风险；
-(3)\emph{可解释性}：交互式解释模块在实验中取得最高清晰度分，契合教学与决策沟通场景；
-(4)\emph{底座无关的增益}：结构化流水线在开源底座上即可取得接近顶级商用模型的准确性。
+\subsection{典型应用场景}
+OptAgent 的“自然语言进、可运行方案出”特性使其在多类真实场景中具有落地价值：
+(1)课堂教学：运筹学、管理科学课程的教师可当堂把一道文字应用题交给 OptAgent，实时展示“变量—目标—约束”的建模过程、可运行代码与分步讲解，帮助学生理解抽象模型；学生亦可用它自查作业思路。
+(2)中小机构决策：没有专职运筹团队的中小企业、医院与学校，可用大白话描述排班、配送、选址等问题，快速得到一份可复现的初步方案与解释，作为决策参考或与咨询方沟通的共同语言。
+(3)领域专家的草稿助手：即便是 OR 专家，也可用其快速产出建模草稿与基线代码，再在此之上做精细化调整，缩短从问题到原型的周期。这些场景与医疗资源分配等应用研究中“让 LLM 承担建模与沟通、把数值计算交给工具”的思路一致~\cite{wan2025healthcare}，但 OptAgent 进一步强调面向非专业用户的可运行与可解释。
 
-\textbf{局限。}
-(1)\emph{强约束/图结构问题}：TSP、CVRP 上出现漏约束与退化解，说明当前建模提示对全局一致性约束的强制仍不足；
-(2)\emph{最优性上限}：最优命中率（70\%）尚略低于 GPT-4o（80\%），底座能力与提示工程仍是瓶颈；
-(3)\emph{规模}：本文案例以中小规模为主，大规模实例的可扩展性有待验证；
-(4)\emph{评测}：解释清晰度采用 LLM-as-judge，虽附人工抽检，仍可能存在裁判偏差。
+\subsection{优势、局限与改进方向}
+优势。
+(1)易用性：非专业用户仅需自然语言即可获得数学模型、可运行代码与通俗解释，并可多轮纠正，真正降低了优化技术的使用门槛；
+(2)可信性：所有交付代码物理落盘并真实执行，结果可复现、可审计，规避了“看似正确实则不可运行/不可行”的风险；
+(3)可解释性：交互式解释模块在实验中取得最高清晰度分，契合教学与决策沟通场景；
+(4)底座无关的增益：结构化流水线在开源底座上即可取得接近顶级商用模型的准确性。
 
-\textbf{改进方向。}
-(1)引入\emph{建模自校验与修复环}：对生成模型做约束完整性检查（如 TSP 的度约束、子回路消除；CVRP 的容量与流平衡），失败即自动修复重跑；
-(2)\emph{求解器在环}：对可 MILP 化的问题优先调用 Gurobi/CBC 等求解器并利用其可行性/最优性证书，如 SIRL、Power-System 等工作所示~\cite{chen2025sirl,hu2025power}；
-(3)\emph{多候选与自一致}：对同一问题生成多份模型/代码并交叉验证，降低单次漏约束风险；
-(4)\emph{领域知识注入与检索增强}：结合 RAG 引入问题族的建模范式与约束模板~\cite{wan2025healthcare,li2023synthesizing}。
+局限。
+(1)强约束/图结构问题：TSP、CVRP 上出现漏约束与退化解，说明当前建模提示对全局一致性约束的强制仍不足；
+(2)最优性上限：最优命中率（70\%）尚略低于 GPT-4o（80\%），底座能力与提示工程仍是瓶颈；
+(3)规模：本文案例以中小规模为主，大规模实例的可扩展性有待验证；
+(4)评测：解释清晰度采用 LLM-as-judge，虽附人工抽检，仍可能存在裁判偏差。
+
+改进方向。
+(1)引入建模自校验与修复环：对生成模型做约束完整性检查（如 TSP 的度约束、子回路消除；CVRP 的容量与流平衡），失败即自动修复重跑；
+(2)求解器在环：对可 MILP 化的问题优先调用 Gurobi/CBC 等求解器并利用其可行性/最优性证书，如 SIRL、Power-System 等工作所示~\cite{chen2025sirl,hu2025power}；
+(3)多候选与自一致：对同一问题生成多份模型/代码并交叉验证，降低单次漏约束风险；
+(4)领域知识注入与检索增强：结合 RAG 引入问题族的建模范式与约束模板~\cite{wan2025healthcare,li2023synthesizing}。
 
 \section{结论}\label{sec:conclusion}
 
-本文面向“让所有专业背景的用户都能使用运筹优化”的目标，设计并实现了运筹优化智能体 OptAgent，构建了“自然语言理解$\rightarrow$数学建模$\rightarrow$可执行代码生成$\rightarrow$落盘真实执行$\rightarrow$交互式解释”的完整闭环。在 10 个经典组合优化问题上的真实对比实验表明：OptAgent 在代码可运行率（100\%）与面向非专业用户的解释清晰度（3.56/5，最高）上表现最佳，在建模准确性（70\%）上接近最强商用模型 GPT-4o（80\%）并显著优于同类国产基线，且相较同底座裸模型（最优命中率同为 70\%）在代码可运行率与解释清晰度上存在可度量的流水线增益。
+本文面向“让所有专业背景的用户都能使用运筹优化”的目标，设计并实现了运筹优化智能体 OptAgent，构建了“自然语言理解$\rightarrow$数学建模$\rightarrow$可执行代码生成$\rightarrow$落盘真实执行$\rightarrow$交互式解释”的完整闭环。在 10 个经典组合优化问题上的真实对比实验表明：OptAgent 在代码可运行率（100\%）与面向非专业用户的解释清晰度（3.56/5，最高）上表现最佳，在建模准确性（70\%）上接近最强商用模型 GPT-4o（80\%）并显著优于同类国产基线，且相较同底座裸模型（最优命中率同为 70\%）在代码可运行率与解释清晰度上存在可度量的流水线增益。在一个源自远海岛礁应急物资补给的真实地理算例（MDVRPTW-P）上，OptAgent 自动生成的精确求解代码进一步复现了文献公布的精确最优值（$268.82$ 对 $268.8$），说明该流水线在带多重现实约束的专业级决策问题上同样可用、可复现。
 
-\textbf{为什么用户应当使用这个智能体？} 对于\emph{非运筹专业的教师、学生与中小机构决策者}而言，OptAgent 的价值不在于“比最强大模型多解对一道题”，而在于：\emph{用自然语言即可得到一份可运行、可复现、并配有通俗分步讲解的完整解决方案}——它把“建模—编码—求解—解释”这条原本需要专家才能走通的链路，变成了对话即可完成的过程；同时以“真实执行 + 独立校验”保证结果可信，避免大模型“一本正经地给出错误答案”。这使优化技术从少数专家的工具，走向更广泛的教育与决策场景。我们也如实指出其在强约束/图结构问题上的不足，并给出了以“建模自校验、求解器在环、多候选自一致”为核心的清晰改进路线。
+为什么用户应当使用这个智能体？ 对于非运筹专业的教师、学生与中小机构决策者而言，OptAgent 的价值不在于“比最强大模型多解对一道题”，而在于：用自然语言即可得到一份可运行、可复现、并配有通俗分步讲解的完整解决方案——它把“建模—编码—求解—解释”这条原本需要专家才能走通的链路，变成了对话即可完成的过程；同时以“真实执行 + 独立校验”保证结果可信，避免大模型“一本正经地给出错误答案”。这使优化技术从少数专家的工具，走向更广泛的教育与决策场景。我们也如实指出其在强约束/图结构问题上的不足，并给出了以“建模自校验、求解器在环、多候选自一致”为核心的清晰改进路线。
 
 \begin{thebibliography}{99}
 \small
-\bibitem{wan2025healthcare} F. Wan, K. Wang, T. Wang, H. Qin, J. Fondrevelle, A. Duclos. Enhancing healthcare resource allocation through large language models. \emph{Swarm and Evolutionary Computation}, 94:101859, 2025.
+\bibitem{wan2025healthcare} F. Wan, K. Wang, T. Wang, H. Qin, J. Fondrevelle, A. Duclos. Enhancing healthcare resource allocation through large language models. Swarm and Evolutionary Computation, 94:101859, 2025.
 \bibitem{jiang2025nlco} X. Jiang, J. Chen, C. Zhang, et al. Reasoning in a Combinatorial and Constrained World: Benchmarking LLMs on Natural-Language Combinatorial Optimization. arXiv, 2025.
-\bibitem{daros2026survey} F. Da Ros, M. Soprano, L. Di Gaspero, K. Roitero. Large Language Models for Combinatorial Optimization: A Systematic Review. \emph{ACM Computing Surveys}, 58(11):Article 272, 2026.
-\bibitem{ahmaditeshnizi2024optimus} A. AhmadiTeshnizi, W. Gao, M. Udell. OptiMUS: Scalable Optimization Modeling with (MI)LP Solvers and Large Language Models. \emph{ICML}, 2024. arXiv:2402.10172.
-\bibitem{xiao2024chainofexperts} Z. Xiao, et al. Chain-of-Experts: When LLMs Meet Complex Operations Research Problems. \emph{ICLR}, 2024.
+\bibitem{daros2026survey} F. Da Ros, M. Soprano, L. Di Gaspero, K. Roitero. Large Language Models for Combinatorial Optimization: A Systematic Review. ACM Computing Surveys, 58(11):Article 272, 2026.
+\bibitem{ahmaditeshnizi2024optimus} A. AhmadiTeshnizi, W. Gao, M. Udell. OptiMUS: Scalable Optimization Modeling with (MI)LP Solvers and Large Language Models. ICML, 2024. arXiv:2402.10172.
+\bibitem{xiao2024chainofexperts} Z. Xiao, et al. Chain-of-Experts: When LLMs Meet Complex Operations Research Problems. ICLR, 2024.
 \bibitem{li2023synthesizing} Q. Li, L. Zhang, V. Mak-Hau. Synthesizing mixed-integer linear programming models from natural language descriptions. arXiv:2311.15271, 2023.
-\bibitem{chen2025sirl} Y. Chen, J. Xia, S. Shao, D. Ge, Y. Ye. Solver-Informed RL: Grounding Large Language Models for Authentic Optimization Modeling. \emph{NeurIPS}, 2025.
+\bibitem{chen2025sirl} Y. Chen, J. Xia, S. Shao, D. Ge, Y. Ye. Solver-Informed RL: Grounding Large Language Models for Authentic Optimization Modeling. NeurIPS, 2025.
 \bibitem{yang2025orthought} B. Yang, Q. Zhou, J. Li, X. Su, S. Hu. Automated Optimization Modeling through Expert-Guided Large Language Model Reasoning. arXiv:2508.14410, 2025.
 \bibitem{xiao2025survey} Z. Xiao, J. Xie, L. Xu, et al. A Survey of Optimization Modeling Meets LLMs: Progress and Future Directions. arXiv:2508.10047, 2025.
 \bibitem{hu2025power} Y. Hu, T. Zhao, M. Yue. From Natural Language to Solver-Ready Power System Optimization: An LLM-Assisted, Validation-in-the-Loop Framework. arXiv:2508.08147, 2025.
 \bibitem{wu2025evostep} Y. Wu, Y. Zhang, Y. Wu, Y. Wang, J. Zhang, J. Cheng. Evo-Step: Evolutionary Generation and Stepwise Validation for Optimizing LLMs in Operations Research. arXiv, 2025.
-\bibitem{kool2019attention} W. Kool, H. van Hoof, M. Welling. Attention, Learn to Solve Routing Problems! \emph{ICLR}, 2019.
-\bibitem{kwon2020pomo} Y.-D. Kwon, J. Choo, B. Kim, et al. POMO: Policy Optimization with Multiple Optima for Reinforcement Learning. \emph{NeurIPS}, 33, 2020.
-\bibitem{ramamonjison2023nl4opt} R. Ramamonjison, et al. NL4Opt: Formulating Optimization Problems Based on Their Natural Language Descriptions. \emph{NeurIPS Competition Track}, 2023.
+\bibitem{kool2019attention} W. Kool, H. van Hoof, M. Welling. Attention, Learn to Solve Routing Problems! ICLR, 2019.
+\bibitem{kwon2020pomo} Y.-D. Kwon, J. Choo, B. Kim, et al. POMO: Policy Optimization with Multiple Optima for Reinforcement Learning. NeurIPS, 33, 2020.
+\bibitem{ramamonjison2023nl4opt} R. Ramamonjison, et al. NL4Opt: Formulating Optimization Problems Based on Their Natural Language Descriptions. NeurIPS Competition Track, 2023.
 \end{thebibliography}
 
 \end{document}

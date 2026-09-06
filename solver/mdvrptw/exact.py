@@ -25,6 +25,8 @@ def solve_exact(instance: Dict[str, Any], *, time_limit: int = 120, verbose: boo
     service = float(params["service_time"])
     max_veh = int(params["max_vehicles_per_depot"])
     penalty_l = float(params["priority_penalty_L"])
+    w1 = float(params.get("w1", 1.0))   # 总航行时间权重（论文算例取 0.8）
+    w2 = float(params.get("w2", 1.0))   # 优先级惩罚权重（论文算例取 0.2）
 
     def travel(i: int, j: int) -> float:
         return dist[(i, j)] / v1
@@ -81,7 +83,7 @@ def solve_exact(instance: Dict[str, Any], *, time_limit: int = 120, verbose: boo
         penalty_l * max(0.0, nodes[j]["priority"] - nodes[i]["priority"]) * x[(i, j)]
         for (i, j) in cc_arcs
     )
-    model.setObjective(travel_term + penalty_term, GRB.MINIMIZE)
+    model.setObjective(w1 * travel_term + w2 * penalty_term, GRB.MINIMIZE)
     model.optimize()
 
     status_map = {GRB.OPTIMAL: "OPTIMAL", GRB.TIME_LIMIT: "TIME_LIMIT", GRB.INFEASIBLE: "INFEASIBLE"}
@@ -113,6 +115,10 @@ def solve_exact(instance: Dict[str, Any], *, time_limit: int = 120, verbose: boo
         "mip_gap": round(model.MIPGap, 6),
         "travel_time": round(ev["travel_time"], 4),
         "priority_penalty": round(ev["priority_penalty"], 4),
+        "weighted_travel": round(ev["weighted_travel"], 4),
+        "weighted_penalty": round(ev["weighted_penalty"], 4),
+        "w1": ev["w1"],
+        "w2": ev["w2"],
         "feasible": ev["feasible"],
         "num_routes": ev["num_routes"],
         "routes": routes,
